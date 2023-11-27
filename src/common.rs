@@ -1,13 +1,78 @@
+use std::sync::{Arc, RwLock};
+
 use bevy::prelude::*;
+use bevy_asset_loader::prelude::*;
+use bevy_ggrs::*;
+use bevy_matchbox::{matchbox_socket::WebRtcSocket, prelude::*};
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, States, Default, Reflect)]
 pub enum AppState {
     #[default]
+    Loading,
     StartMenu,
     Lobby,
+    InRoom,
     Playing,
     Paused,
     GameOver,
+}
+
+#[derive(AssetCollection, Resource)]
+pub struct MyAssets {
+    #[asset(path = "sounds/bg.mp3")]
+    pub game_bg: Handle<AudioSource>,
+    #[asset(path = "sounds/duizi.mp3")]
+    pub duizi: Handle<AudioSource>,
+    #[asset(path = "sounds/fapai.mp3")]
+    pub fapai: Handle<AudioSource>,
+    #[asset(path = "sounds/login_bg.ogg")]
+    pub login_bg: Handle<AudioSource>,
+    #[asset(path = "sounds/man_san_dai_yi_dui.ogg")]
+    pub man_san_dai_yi: Handle<AudioSource>,
+    #[asset(path = "sounds/start_a.ogg")]
+    pub start: Handle<AudioSource>,
+    #[asset(path = "sounds/woman_bu_jiao.ogg")]
+    pub woman_bu_jiao: Handle<AudioSource>,
+    #[asset(path = "sounds/woman_jiao_di_zhu.ogg")]
+    pub woman_jiao_di_zhu: Handle<AudioSource>,
+
+    #[asset(texture_atlas(
+        tile_size_x = 64.,
+        tile_size_y = 64.,
+        columns = 13,
+        rows = 5,
+        padding_x = 0.,
+        padding_y = 0.,
+        offset_x = 0.,
+        offset_y = 0.
+    ))]
+    #[asset(path = "image/card/card.png")]
+    pub card: Handle<TextureAtlas>,
+
+    #[asset(path = "image/youqing_girl.png")]
+    pub you_qing_girl: Handle<Image>,
+    #[asset(path = "image/youqing_boy.png")]
+    pub you_qing_boy: Handle<Image>,
+    #[asset(path = "image/tip.png")]
+    pub tip: Handle<Image>,
+    #[asset(path = "bg_login.jpg")]
+    pub bg_login: Handle<Image>,
+    #[asset(path = "loading_bg.png")]
+    pub loading_bg: Handle<Image>,
+    #[asset(path = "image/btn_enter_room.png")]
+    pub btn_enter_room: Handle<Image>,
+    #[asset(path = "image/button/btn_weixin.png")]
+    pub btn_weixin: Handle<Image>,
+    #[asset(path = "image/button/btn_ traveler.png")]
+    pub btn_traveler: Handle<Image>,
+    #[asset(path = "image/yonghuxieyi.png")]
+    pub yonghuxieyi: Handle<Image>,
+    #[asset(path = "image/check_mark.png")]
+    pub check_mark: Handle<Image>,
+    #[asset(path = "image/btn_create_room.png")]
+    pub btn_create_room: Handle<Image>,
+    #[asset(path = "table_bg_1.jpg")]
+    pub table_bg_1: Handle<Image>,
 }
 
 #[derive(Component)]
@@ -28,51 +93,38 @@ pub struct GameSounds {
     pub woman_jiao_di_zhu: Handle<AudioSource>,
 }
 
-pub fn setup_game_sounds(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.insert_resource(GameSounds {
-        game_bg: asset_server.load("sounds/bg.mp3"),
-        duizi: asset_server.load("sounds/duizi.mp3"),
-        fapai: asset_server.load("sounds/fapai.mp3"),
-        login_bg: asset_server.load("sounds/login_bg.ogg"),
-        man_san_dai_yi: asset_server.load("sounds/man_san_dai_yi_dui.ogg"),
-        start: asset_server.load("sounds/start_a.ogg"),
-        woman_bu_jiao: asset_server.load("sounds/woman_bu_jiao.ogg"),
-        woman_jiao_di_zhu: asset_server.load("sounds/woman_jiao_di_zhu.ogg"),
-    });
-}
-
 #[derive(Debug, Resource)]
 pub struct GameTextureAtlasHandles {
     pub card: Handle<TextureAtlas>,
     pub you_qing: Handle<TextureAtlas>,
 }
 
-pub fn setup_game_texture_atlas(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
-) {
-    commands.insert_resource(GameTextureAtlasHandles {
-        card: texture_atlases.add(TextureAtlas::from_grid(
-            asset_server.load("image/card/card.png"),
-            Vec2::new(2000.0, 4000.0),
-            13,
-            5,
-            None,
-            None,
-        )),
-        you_qing: texture_atlases.add(TextureAtlas::from_grid(
-            asset_server.load("image/youqingTip.png"),
-            Vec2::new(402.0, 600.0),
-            1,
-            3,
-            Some(Vec2::new(0.0, 0.0)),
-            Some(Vec2::new(0.0, 0.0)),
-        )),
-    });
+#[derive(Debug, Resource, Clone)]
+pub struct PokerSocket(pub Arc<RwLock<WebRtcSocket>>);
+impl ggrs::NonBlockingSocket<PeerId> for PokerSocket {
+    fn send_to(&mut self, msg: &ggrs::Message, addr: &PeerId) {
+        self.0
+            .write()
+            // if the lock is poisoned, we're already doomed, time to panic
+            .expect("failed to lock socket for reading")
+            .send_to(msg, addr);
+    }
+
+    fn receive_all_messages(&mut self) -> Vec<(PeerId, ggrs::Message)> {
+        self.0
+            .write()
+            // if the lock is poisoned, we're already doomed, time to panic
+            .expect("failed to lock socket for receiving")
+            .receive_all_messages()
+    }
 }
 
+// #[derive(Serialize, Deserialize, Debug, Clone)]
+// pub enum PokerMessage {
+//     Chat { handle: GgrsHandle, message: String },
+// }
 pub fn menu_button_press_system(
+    mut commands: Commands,
     query: Query<(&Interaction, &MenuButton), (Changed<Interaction>, With<Button>)>,
     mut state: ResMut<NextState<AppState>>,
 ) {
@@ -80,6 +132,13 @@ pub fn menu_button_press_system(
         if *interaction == Interaction::Pressed {
             match button {
                 MenuButton::Traveler => {
+                    let room_url = "ws://127.0.0.1:3536/extreme_bevy?next=2";
+                    // let (socket, message_loop) = WebRtcSocket::builder(room_url)
+                    //     .add_unreliable_channel()
+                    //     .add_reliable_channel()
+                    //     .build();
+                    info!("connecting to matchbox server: {room_url}");
+                    commands.insert_resource(MatchboxSocket::new_ggrs(room_url));
                     state.set(AppState::Lobby);
                 }
                 MenuButton::Weixin => {
@@ -92,3 +151,9 @@ pub fn menu_button_press_system(
 
 #[derive(Debug, Resource)]
 pub struct Cards {}
+
+pub fn despawn_screen<T: Component>(to_despawn: Query<Entity, With<T>>, mut commands: Commands) {
+    for entity in &to_despawn {
+        commands.entity(entity).despawn_recursive();
+    }
+}

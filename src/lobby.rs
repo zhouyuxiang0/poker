@@ -1,16 +1,32 @@
 use bevy::prelude::*;
+use bevy_matchbox::{
+    matchbox_socket::{PeerId, PeerState, SingleChannel},
+    MatchboxSocket,
+};
 
-use crate::common::{GameSounds, GameTextureAtlasHandles};
+use crate::common::{despawn_screen, AppState, MyAssets};
 
 #[derive(Component)]
-pub struct Lobby;
+pub struct LobbyPlugin;
 
-pub fn setup_lobby(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    game_sounds: Res<GameSounds>,
-    game_texture_atlas: Res<GameTextureAtlasHandles>,
-) {
+#[derive(Component)]
+pub enum LobbyButton {
+    EnterRoom,
+    CreateRoom,
+}
+
+impl Plugin for LobbyPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(OnEnter(AppState::Lobby), setup_lobby)
+            .add_systems(
+                Update,
+                (lobby_button_press_system, lobby_system).run_if(in_state(AppState::Lobby)),
+            )
+            .add_systems(OnExit(AppState::Lobby), (despawn_screen::<LobbyPlugin>,));
+    }
+}
+
+pub fn setup_lobby(mut commands: Commands, asset: Res<MyAssets>) {
     commands
         .spawn((
             NodeBundle {
@@ -23,18 +39,18 @@ pub fn setup_lobby(
                 },
                 ..Default::default()
             },
-            Lobby,
+            LobbyPlugin,
         ))
         .with_children(|parent| {
             parent.spawn(ImageBundle {
-                image: asset_server.load("bg_login.jpg").into(),
+                image: asset.bg_login.clone().into(),
                 ..default()
             });
-            parent.spawn(AtlasImageBundle {
-                texture_atlas: game_texture_atlas.you_qing.to_owned(),
+            parent.spawn(ImageBundle {
+                image: asset.you_qing_girl.clone().into(),
                 style: Style {
                     width: Val::Px(390.),
-                    height: Val::Px(310.),
+                    height: Val::Px(370.),
                     position_type: PositionType::Absolute,
                     top: Val::Px(95.),
                     left: Val::Px(320.),
@@ -42,31 +58,89 @@ pub fn setup_lobby(
                 },
                 ..Default::default()
             });
-            parent.spawn(AtlasImageBundle {
-                texture_atlas: game_texture_atlas.you_qing.to_owned(),
-                texture_atlas_image: UiTextureAtlasImage {
-                    index: 1,
-                    ..Default::default()
-                },
+            parent.spawn(ImageBundle {
+                image: asset.you_qing_boy.clone().into(),
                 style: Style {
                     width: Val::Px(390.),
-                    height: Val::Px(310.),
+                    height: Val::Px(370.),
                     position_type: PositionType::Absolute,
-                    top: Val::Px(195.),
-                    left: Val::Px(700.),
+                    top: Val::Px(95.),
+                    left: Val::Px(825.),
                     ..default()
                 },
                 ..Default::default()
             });
+            parent
+                .spawn(ButtonBundle {
+                    image: asset.btn_enter_room.clone().into(),
+                    style: Style {
+                        width: Val::Px(390.),
+                        height: Val::Px(160.),
+                        position_type: PositionType::Absolute,
+                        top: Val::Px(395.),
+                        left: Val::Px(315.),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .insert(LobbyButton::EnterRoom);
             parent.spawn(ImageBundle {
-                image: asset_server.load("image/btn_enter_room.png").into(),
+                image: asset.btn_create_room.clone().into(),
                 style: Style {
                     position_type: PositionType::Absolute,
                     top: Val::Px(395.),
-                    left: Val::Px(315.),
+                    left: Val::Px(820.),
+                    ..Default::default()
+                },
+                ..Default::default()
+            });
+            parent.spawn(ImageBundle {
+                image: asset.tip.clone().into(),
+                style: Style {
+                    position_type: PositionType::Absolute,
+                    top: Val::Px(220.),
+                    left: Val::Px(-60.),
+                    ..Default::default()
+                },
+                transform: Transform {
+                    rotation: Quat::from_rotation_z(-1.57),
+                    // rotation: Quat::from_array([20., 0., 0., 0.]),
                     ..Default::default()
                 },
                 ..Default::default()
             });
         });
+}
+
+pub fn lobby_button_press_system(
+    mut commands: Commands,
+    query: Query<(&Interaction, &LobbyButton), (Changed<Interaction>, With<Button>)>,
+    mut state: ResMut<NextState<AppState>>,
+) {
+    for (interaction, button) in query.iter() {
+        if *interaction == Interaction::Pressed {
+            match button {
+                LobbyButton::EnterRoom => {
+                    state.set(AppState::InRoom);
+                }
+                LobbyButton::CreateRoom => {
+                    // println!("weixin");
+                }
+            }
+        }
+    }
+}
+
+pub fn lobby_system(mut commands: Commands, mut socket: ResMut<MatchboxSocket<SingleChannel>>) {
+    for (peer, new_state) in socket.update_peers() {
+        // you can also handle the specific dis(connections) as they occur:
+        match new_state {
+            PeerState::Connected => info!("peer {peer} connected"),
+            PeerState::Disconnected => info!("peer {peer} disconnected"),
+        }
+    }
+    let connected_peers = socket.connected_peers();
+    let peer_id = connected_peers.collect::<Vec<PeerId>>();
+    // socket.send(Box::new(b"packet"), peer_id[0]);
+    println!("在线人数{} {:?}", peer_id.len() + 1, peer_id);
 }

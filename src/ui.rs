@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::common::{AppState, GameSounds, GameTextureAtlasHandles, MenuButton};
+use crate::common::{MenuButton, MyAssets};
 
 #[derive(Component)]
 pub struct OnStartMenuScreen;
@@ -8,12 +8,7 @@ pub struct OnStartMenuScreen;
 #[derive(Component)]
 pub struct OnStartMenuScreenMultiplayerModeFlag;
 
-pub fn setup_start_menu(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    game_sounds: Res<GameSounds>,
-    game_texture_atlas: Res<GameTextureAtlasHandles>,
-) {
+pub fn setup_start_menu(mut commands: Commands, assets: Res<MyAssets>) {
     commands
         .spawn((
             NodeBundle {
@@ -30,12 +25,12 @@ pub fn setup_start_menu(
         ))
         .with_children(|parent| {
             parent.spawn(ImageBundle {
-                image: asset_server.load("loading_bg.png").into(),
+                image: assets.loading_bg.clone().into(),
                 ..default()
             });
             parent
                 .spawn(ButtonBundle {
-                    image: asset_server.load("image/button/btn_weixin.png").into(),
+                    image: assets.btn_weixin.clone().into(),
                     style: Style {
                         width: Val::Px(200.),
                         height: Val::Px(60.),
@@ -51,7 +46,7 @@ pub fn setup_start_menu(
             parent
                 .spawn((
                     ButtonBundle {
-                        image: asset_server.load("image/button/btn_ traveler.png").into(),
+                        image: assets.btn_traveler.clone().into(),
                         style: Style {
                             width: Val::Px(200.),
                             height: Val::Px(60.),
@@ -68,7 +63,7 @@ pub fn setup_start_menu(
                 .insert(MenuButton::Traveler);
             parent.spawn((
                 ButtonBundle {
-                    image: asset_server.load("image/yonghuxieyi.png").into(),
+                    image: assets.yonghuxieyi.clone().into(),
                     style: Style {
                         width: Val::Px(400.),
                         height: Val::Px(50.),
@@ -84,7 +79,7 @@ pub fn setup_start_menu(
             ));
             parent.spawn((
                 ImageBundle {
-                    image: asset_server.load("image/check_mark.png").into(),
+                    image: assets.check_mark.clone().into(),
                     style: Style {
                         width: Val::Px(70.),
                         height: Val::Px(50.),
@@ -100,7 +95,7 @@ pub fn setup_start_menu(
             ));
         });
     commands.spawn(AudioBundle {
-        source: game_sounds.login_bg.clone(),
+        source: assets.login_bg.clone(),
         // settings: PlaybackSettings::LOOP,
         settings: PlaybackSettings::ONCE,
     });
