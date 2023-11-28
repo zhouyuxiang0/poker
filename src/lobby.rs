@@ -4,7 +4,10 @@ use bevy_matchbox::{
     MatchboxSocket,
 };
 
-use crate::common::{despawn_screen, AppState, MyAssets};
+use crate::{
+    common::{despawn_screen, AppState, MyAssets},
+    room::{Player, Rooms},
+};
 
 #[derive(Component)]
 pub struct LobbyPlugin;
@@ -13,6 +16,23 @@ pub struct LobbyPlugin;
 pub enum LobbyButton {
     EnterRoom,
     CreateRoom,
+}
+
+#[derive(Resource)]
+pub struct Lobby {
+    pub rooms: Rooms,
+    pub wait_players: Vec<Player>,
+    socket: MatchboxSocket<SingleChannel>,
+}
+
+impl Lobby {
+    pub fn new(socket: MatchboxSocket<SingleChannel>) -> Self {
+        Self {
+            rooms: Rooms::default(),
+            wait_players: vec![],
+            socket,
+        }
+    }
 }
 
 impl Plugin for LobbyPlugin {
@@ -113,7 +133,6 @@ pub fn setup_lobby(mut commands: Commands, asset: Res<MyAssets>) {
 }
 
 pub fn lobby_button_press_system(
-    mut commands: Commands,
     query: Query<(&Interaction, &LobbyButton), (Changed<Interaction>, With<Button>)>,
     mut state: ResMut<NextState<AppState>>,
 ) {
@@ -131,16 +150,21 @@ pub fn lobby_button_press_system(
     }
 }
 
-pub fn lobby_system(mut commands: Commands, mut socket: ResMut<MatchboxSocket<SingleChannel>>) {
-    for (peer, new_state) in socket.update_peers() {
+pub fn lobby_system(mut lobby: ResMut<Lobby>) {
+    for (peer, new_state) in lobby.socket.update_peers() {
         // you can also handle the specific dis(connections) as they occur:
         match new_state {
-            PeerState::Connected => info!("peer {peer} connected"),
+            PeerState::Connected => {
+                let mut payload = Vec::new();
+                ciborium::ser::into_writer(&lobby, &mut payload).unwrap();
+                lobby.socket.send(lobby, peer);
+                info!("peer {peer} connected");
+            }
             PeerState::Disconnected => info!("peer {peer} disconnected"),
         }
     }
-    let connected_peers = socket.connected_peers();
+    let connected_peers = lobby.socket.connected_peers();
     let peer_id = connected_peers.collect::<Vec<PeerId>>();
     // socket.send(Box::new(b"packet"), peer_id[0]);
-    println!("在线人数{} {:?}", peer_id.len() + 1, peer_id);
+    // println!("在线人数{} {:?}", peer_id.len() + 1, peer_id);
 }

@@ -1,6 +1,9 @@
 use bevy::prelude::*;
 
-use crate::common::{despawn_screen, AppState, MenuButton, MyAssets};
+use crate::{
+    common::{despawn_screen, AppState, MenuButton, MyAssets},
+    lobby::Lobby,
+};
 use bevy_matchbox::prelude::*;
 
 #[derive(Component)]
@@ -119,7 +122,9 @@ pub fn menu_button_press_system(
                     //     .add_reliable_channel()
                     //     .build();
                     info!("connecting to matchbox server: {room_url}");
-                    commands.insert_resource(MatchboxSocket::new_ggrs(room_url));
+                    let socket = MatchboxSocket::new_ggrs(room_url);
+                    let lobby = Lobby::new(socket);
+                    commands.insert_resource(lobby);
                     state.set(AppState::Lobby);
                 }
                 MenuButton::Weixin => {

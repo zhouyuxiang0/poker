@@ -4,7 +4,6 @@ mod common;
 mod lobby;
 mod room;
 mod start_menu;
-mod ui;
 
 use bevy_asset_loader::prelude::*;
 use lobby::LobbyPlugin;
