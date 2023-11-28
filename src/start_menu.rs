@@ -113,7 +113,7 @@ pub fn menu_button_press_system(
         if *interaction == Interaction::Pressed {
             match button {
                 MenuButton::Traveler => {
-                    let room_url = "ws://127.0.0.1:3536/extreme_bevy?next=2";
+                    let room_url = "ws://127.0.0.1:3536/poker";
                     // let (socket, message_loop) = WebRtcSocket::builder(room_url)
                     //     .add_unreliable_channel()
                     //     .add_reliable_channel()
