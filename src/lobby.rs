@@ -3,8 +3,12 @@ use bevy_matchbox::{
     matchbox_socket::{PeerId, PeerState, SingleChannel},
     MatchboxSocket,
 };
+use serde::{Deserialize, Serialize};
 
-use crate::common::{despawn_screen, AppState, MyAssets};
+use crate::{
+    common::{despawn_screen, AppState, Event, MyAssets},
+    room::Room,
+};
 
 #[derive(Component)]
 pub struct LobbyPlugin;
@@ -15,12 +19,53 @@ pub enum LobbyButton {
     CreateRoom,
 }
 
+#[derive(Serialize, Deserialize, Clone)]
+pub struct AddressedEvent {
+    src: PeerId,
+    event: Event,
+}
+
+#[derive(Resource)]
+pub struct Lobby {
+    pub wait_players: Vec<PeerId>,
+    socket: MatchboxSocket<SingleChannel>,
+    pub rooms: Vec<Room>,
+}
+
+impl Lobby {
+    pub fn new(mut socket: MatchboxSocket<SingleChannel>) -> Self {
+        Self {
+            wait_players: vec![],
+            socket,
+            rooms: vec![],
+        }
+    }
+
+    fn receive(&mut self) -> Vec<AddressedEvent> {
+        self.socket
+            .receive()
+            .iter()
+            .map(|(_, payload)| payload)
+            .filter_map(|payload| ciborium::de::from_reader(&payload[..]).ok())
+            .collect()
+    }
+
+    fn send(&mut self, event: Event) {
+        // self.socket.send(event);
+    }
+
+    fn join(&mut self, peer_id: PeerId) {
+        self.wait_players.push(self.socket.id().unwrap());
+    }
+}
+
 impl Plugin for LobbyPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(OnEnter(AppState::Lobby), setup_lobby)
             .add_systems(
                 Update,
-                (lobby_button_press_system, lobby_system).run_if(in_state(AppState::Lobby)),
+                (lobby_button_press_system, receive_events, lobby_system)
+                    .run_if(in_state(AppState::Lobby)),
             )
             .add_systems(OnExit(AppState::Lobby), (despawn_screen::<LobbyPlugin>,));
     }
@@ -131,16 +176,31 @@ pub fn lobby_button_press_system(
     }
 }
 
-pub fn lobby_system(mut commands: Commands, mut socket: ResMut<MatchboxSocket<SingleChannel>>) {
-    for (peer, new_state) in socket.update_peers() {
-        // you can also handle the specific dis(connections) as they occur:
+pub fn lobby_system(mut lobby: ResMut<Lobby>) {
+    for (peer, new_state) in lobby.socket.update_peers() {
         match new_state {
-            PeerState::Connected => info!("peer {peer} connected"),
-            PeerState::Disconnected => info!("peer {peer} disconnected"),
+            PeerState::Connected => {
+                info!("在线人数 {}", lobby.socket.players().len());
+            }
+            PeerState::Disconnected => {
+                info!("peer {peer:?} disconnected")
+            }
         }
     }
-    let connected_peers = socket.connected_peers();
-    let peer_id = connected_peers.collect::<Vec<PeerId>>();
-    // socket.send(Box::new(b"packet"), peer_id[0]);
-    println!("在线人数{} {:?}", peer_id.len() + 1, peer_id);
+}
+
+pub fn receive_events(mut lobby: ResMut<Lobby>) {
+    let binding = lobby.receive();
+    let events = Vec::from_iter(
+        binding
+            .iter()
+            .filter(|e| e.src != lobby.socket.id().unwrap()),
+    );
+    for AddressedEvent { src, event } in events {
+        match event {
+            Event::SyncRooms(rooms) => {
+                println!("{rooms:?}");
+            }
+        }
+    }
 }

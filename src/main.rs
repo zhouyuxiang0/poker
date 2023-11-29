@@ -22,6 +22,7 @@ fn main() {
             primary_window: Some(Window {
                 title: "poker".into(),
                 fit_canvas_to_parent: true,
+                resizable: false,
                 ..Default::default()
             }),
             ..Default::default()

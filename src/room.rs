@@ -14,10 +14,11 @@ struct Peer {
     cursor: Entity,
 }
 struct Peers(HashMap<CollabId, Peer>);
-#[derive(Component)]
+#[derive(Component, Serialize, Deserialize, Clone, Copy, Debug)]
 pub struct Room {
-    collab_id: CollabId,
-    peers: Peers,
+    pub local_player: PeerId,
+    pub player1: Option<PeerId>,
+    pub player2: Option<PeerId>,
 }
 
 pub struct Rooms(Vec<Vec3>);
