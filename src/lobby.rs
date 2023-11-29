@@ -50,12 +50,21 @@ impl Lobby {
             .collect()
     }
 
-    fn send(&mut self, event: Event) {
-        // self.socket.send(event);
+    fn send(&mut self, event: AddressedEvent) {
+        let mut payload = Vec::new();
+        ciborium::ser::into_writer(&event, &mut payload).unwrap();
+        let peers: Vec<_> = self.socket.connected_peers().collect();
+        for peer in peers {
+            self.socket.send(payload.clone().into(), peer);
+        }
     }
 
     fn join(&mut self, peer_id: PeerId) {
-        self.wait_players.push(self.socket.id().unwrap());
+        self.wait_players.push(peer_id);
+    }
+
+    fn remove_player(&mut self, p: PeerId) {
+        self.wait_players.retain(|peer| peer == &p);
     }
 }
 
@@ -179,12 +188,25 @@ pub fn lobby_system(mut lobby: ResMut<Lobby>) {
     for (peer, new_state) in lobby.socket.update_peers() {
         match new_state {
             PeerState::Connected => {
+                lobby.join(peer);
                 info!("在线人数 {}", lobby.socket.players().len());
+                info!("{:?}", lobby.wait_players);
             }
             PeerState::Disconnected => {
-                info!("peer {peer:?} disconnected")
+                lobby.remove_player(peer);
+                info!("peer {peer:?} disconnected");
+                info!("在线人数 {}", lobby.socket.players().len());
+                info!("{:?}", lobby.wait_players);
             }
         }
+    }
+    if lobby.socket.id().is_some() {
+        let src = lobby.socket.id().unwrap();
+        let rooms = lobby.rooms.to_owned();
+        lobby.send(AddressedEvent {
+            src,
+            event: Event::SyncRooms(rooms),
+        });
     }
 }
 
@@ -198,7 +220,10 @@ pub fn receive_events(mut lobby: ResMut<Lobby>) {
     for AddressedEvent { src, event } in events {
         match event {
             Event::SyncRooms(rooms) => {
-                println!("{rooms:?}");
+                // println!("{rooms:?}");
+            }
+            Event::SyncWaitPlayers(wait_players) => {
+                //
             }
         }
     }
