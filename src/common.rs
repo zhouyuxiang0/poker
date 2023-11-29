@@ -6,7 +6,7 @@ use bevy_ggrs::*;
 use bevy_matchbox::{matchbox_socket::WebRtcSocket, prelude::*};
 use serde::{Deserialize, Serialize};
 
-use crate::{lobby::Lobby, room::Rooms};
+use crate::room::Room;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, States, Default, Reflect)]
 pub enum AppState {
@@ -161,7 +161,7 @@ pub fn despawn_screen<T: Component>(to_despawn: Query<Entity, With<T>>, mut comm
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Copy, Clone)]
-pub enum SocketMsg {
-    RoomMsg(Rooms),
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum Event {
+    SyncRooms(Vec<Room>),
 }

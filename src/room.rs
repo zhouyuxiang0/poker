@@ -7,30 +7,21 @@ use crate::common::{AppState, MyAssets};
 
 type Config = bevy_ggrs::GgrsConfig<u8, PeerId>;
 
-pub struct Player {
-    pub peer_id: PeerId,
+#[derive(Debug, Serialize, Deserialize, Copy, Clone, PartialEq, Eq, Hash)]
+struct CollabId(u16);
+struct Peer {
+    chalk: Entity,
+    cursor: Entity,
 }
-
-#[derive(Component)]
+struct Peers(HashMap<CollabId, Peer>);
+#[derive(Component, Serialize, Deserialize, Clone, Copy, Debug)]
 pub struct Room {
-    pub player: Vec<Player>,
+    pub local_player: PeerId,
+    pub player1: Option<PeerId>,
+    pub player2: Option<PeerId>,
 }
 
-impl Room {
-    pub fn join(&mut self, player: Player) {
-        self.player.push(player);
-    }
-}
-
-// TODO: 哈希map 是否该保存房间信息 实现copy 发送房间信息
-#[derive(Clone, Copy)]
-pub struct Rooms(pub HashMap<u32, Room>);
-
-impl Default for Rooms {
-    fn default() -> Self {
-        Self(HashMap::new())
-    }
-}
+pub struct Rooms(Vec<Vec3>);
 
 pub fn setup_room(mut commands: Commands, assets: Res<MyAssets>) {
     commands

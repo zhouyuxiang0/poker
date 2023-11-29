@@ -100,11 +100,11 @@ pub fn setup_start_menu(mut commands: Commands, assets: Res<MyAssets>) {
                 ..default()
             });
         });
-    commands.spawn(AudioBundle {
-        source: assets.login_bg.clone(),
-        // settings: PlaybackSettings::LOOP,
-        settings: PlaybackSettings::ONCE,
-    });
+    // commands.spawn(AudioBundle {
+    //     source: assets.login_bg.clone(),
+    //     // settings: PlaybackSettings::LOOP,
+    //     settings: PlaybackSettings::ONCE,
+    // });
 }
 
 pub fn menu_button_press_system(
@@ -116,13 +116,9 @@ pub fn menu_button_press_system(
         if *interaction == Interaction::Pressed {
             match button {
                 MenuButton::Traveler => {
-                    let room_url = "ws://127.0.0.1:3536/poker";
-                    // let (socket, message_loop) = WebRtcSocket::builder(room_url)
-                    //     .add_unreliable_channel()
-                    //     .add_reliable_channel()
-                    //     .build();
+                    let room_url = "ws://47.108.130.232:3536/poker";
                     info!("connecting to matchbox server: {room_url}");
-                    let socket = MatchboxSocket::new_ggrs(room_url);
+                    let mut socket = MatchboxSocket::new_ggrs(room_url);
                     let lobby = Lobby::new(socket);
                     commands.insert_resource(lobby);
                     state.set(AppState::Lobby);
