@@ -14,14 +14,24 @@ struct Peer {
     cursor: Entity,
 }
 struct Peers(HashMap<CollabId, Peer>);
-#[derive(Component, Serialize, Deserialize, Clone, Copy, Debug)]
+#[derive(Resource, Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
 pub struct Room {
-    pub local_player: PeerId,
-    pub player1: Option<PeerId>,
+    pub player1: PeerId,
     pub player2: Option<PeerId>,
+    pub player3: Option<PeerId>,
 }
 
-pub struct Rooms(Vec<Vec3>);
+impl Room {
+    pub fn new(peer_id: PeerId) -> Self {
+        Self {
+            player1: peer_id,
+            player2: None,
+            player3: None,
+        }
+    }
+}
+
+pub struct Rooms(Vec<Room>);
 
 pub fn setup_room(mut commands: Commands, assets: Res<MyAssets>) {
     commands

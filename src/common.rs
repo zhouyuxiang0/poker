@@ -163,6 +163,12 @@ pub fn despawn_screen<T: Component>(to_despawn: Query<Entity, With<T>>, mut comm
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum Event {
-    SyncWaitPlayers(Vec<PeerId>),
-    SyncRooms(Vec<Room>),
+    SyncLobby {
+        wait_players: Vec<PeerId>,
+        add_wait_players: Vec<PeerId>,
+        remove_wait_players: Vec<PeerId>,
+        rooms: Vec<Room>,
+        // add_rooms: Vec<PeerId>,
+        // remove_rooms: Vec<Room>,
+    },
 }

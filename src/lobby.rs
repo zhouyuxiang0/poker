@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     common::{despawn_screen, AppState, Event, MyAssets},
-    room::Room,
+    room::{Room, Rooms},
 };
 
 #[derive(Component)]
@@ -65,6 +65,15 @@ impl Lobby {
 
     fn remove_player(&mut self, p: PeerId) {
         self.wait_players.retain(|peer| peer == &p);
+    }
+
+    fn contact_rooms(&mut self, rooms: Vec<Room>) {
+        let mut new_rooms = rooms
+            .iter()
+            .filter(|&room| !self.rooms.contains(room))
+            .map(|v| v.to_owned())
+            .collect::<Vec<Room>>();
+        self.rooms.append(&mut new_rooms);
     }
 }
 
@@ -138,16 +147,20 @@ pub fn setup_lobby(mut commands: Commands, asset: Res<MyAssets>) {
                     ..Default::default()
                 })
                 .insert(LobbyButton::EnterRoom);
-            parent.spawn(ImageBundle {
-                image: asset.btn_create_room.clone().into(),
-                style: Style {
-                    position_type: PositionType::Absolute,
-                    top: Val::Px(395.),
-                    left: Val::Px(820.),
+            parent
+                .spawn(ButtonBundle {
+                    image: asset.btn_create_room.clone().into(),
+                    style: Style {
+                        width: Val::Px(390.),
+                        height: Val::Px(160.),
+                        position_type: PositionType::Absolute,
+                        top: Val::Px(395.),
+                        left: Val::Px(820.),
+                        ..Default::default()
+                    },
                     ..Default::default()
-                },
-                ..Default::default()
-            });
+                })
+                .insert(LobbyButton::CreateRoom);
             parent.spawn(ImageBundle {
                 image: asset.tip.clone().into(),
                 style: Style {
@@ -167,8 +180,10 @@ pub fn setup_lobby(mut commands: Commands, asset: Res<MyAssets>) {
 }
 
 pub fn lobby_button_press_system(
+    mut commands: Commands,
     query: Query<(&Interaction, &LobbyButton), (Changed<Interaction>, With<Button>)>,
     mut state: ResMut<NextState<AppState>>,
+    mut lobby: ResMut<Lobby>,
 ) {
     for (interaction, button) in query.iter() {
         if *interaction == Interaction::Pressed {
@@ -177,7 +192,9 @@ pub fn lobby_button_press_system(
                     state.set(AppState::InRoom);
                 }
                 LobbyButton::CreateRoom => {
-                    // println!("weixin");
+                    let room = Room::new(lobby.socket.id().unwrap());
+                    commands.insert_resource(room);
+                    state.set(AppState::InRoom);
                 }
             }
         }
@@ -185,27 +202,32 @@ pub fn lobby_button_press_system(
 }
 
 pub fn lobby_system(mut lobby: ResMut<Lobby>) {
+    let mut add_wait_players = vec![];
+    let mut remove_wait_players = vec![];
     for (peer, new_state) in lobby.socket.update_peers() {
         match new_state {
             PeerState::Connected => {
-                lobby.join(peer);
-                info!("在线人数 {}", lobby.socket.players().len());
-                info!("{:?}", lobby.wait_players);
+                add_wait_players.push(peer);
             }
             PeerState::Disconnected => {
-                lobby.remove_player(peer);
-                info!("peer {peer:?} disconnected");
-                info!("在线人数 {}", lobby.socket.players().len());
-                info!("{:?}", lobby.wait_players);
+                remove_wait_players.push(peer);
             }
         }
     }
     if lobby.socket.id().is_some() {
         let src = lobby.socket.id().unwrap();
         let rooms = lobby.rooms.to_owned();
+        let wait_players = lobby.wait_players.to_owned();
         lobby.send(AddressedEvent {
             src,
-            event: Event::SyncRooms(rooms),
+            event: Event::SyncLobby {
+                wait_players,
+                add_wait_players,
+                remove_wait_players,
+                rooms,
+                // add_rooms: todo!(),
+                // remove_rooms: todo!(),
+            },
         });
     }
 }
@@ -217,14 +239,17 @@ pub fn receive_events(mut lobby: ResMut<Lobby>) {
             .iter()
             .filter(|e| e.src != lobby.socket.id().unwrap()),
     );
-    for AddressedEvent { src, event } in events {
-        match event {
-            Event::SyncRooms(rooms) => {
-                // println!("{rooms:?}");
-            }
-            Event::SyncWaitPlayers(wait_players) => {
-                //
-            }
-        }
-    }
+    // for AddressedEvent { src, event } in events {
+    //     match event {
+    //         Event::SyncLobby {
+    //             wait_players,
+    //             rooms,
+    //             add_wait_players,
+    //             remove_wait_players,
+    //         } => {
+    //             lobby.contact_rooms(rooms.to_vec());
+    //             // lobby.wait_players.
+    //         }
+    //     }
+    // }
 }

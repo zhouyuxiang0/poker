@@ -1,3 +1,4 @@
+// #![windows_subsystem = "windows"]
 use bevy::prelude::*;
 
 mod common;
@@ -35,7 +36,7 @@ fn main() {
         .add_plugins(StartMenuPlugin)
         .add_plugins(LobbyPlugin)
         .add_systems(OnEnter(AppState::InRoom), setup_room)
-        .add_systems(Update, wait_for_players.run_if(in_state(AppState::InRoom)))
+        // .add_systems(Update, wait_for_players.run_if(in_state(AppState::InRoom)))
         .run();
 }
 fn setup(mut commands: Commands) {
