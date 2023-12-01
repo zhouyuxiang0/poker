@@ -1,3 +1,4 @@
+// #![windows_subsystem = "windows"]
 use bevy::prelude::*;
 
 mod common;
@@ -6,6 +7,7 @@ mod room;
 mod start_menu;
 
 use bevy_asset_loader::prelude::*;
+use bevy_embedded_assets::EmbeddedAssetPlugin;
 use lobby::LobbyPlugin;
 use room::{setup_room, wait_for_players};
 use start_menu::StartMenuPlugin;
@@ -17,15 +19,17 @@ const BACKGROUND_COLOR: Color = Color::BLACK;
 fn main() {
     App::new()
         .add_state::<AppState>()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "poker".into(),
-                fit_canvas_to_parent: true,
-                resizable: false,
+        .add_plugins((DefaultPlugins
+            .set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: "poker".into(),
+                    fit_canvas_to_parent: true,
+                    resizable: false,
+                    ..Default::default()
+                }),
                 ..Default::default()
-            }),
-            ..Default::default()
-        }))
+            })
+            .add_before::<bevy::asset::AssetPlugin, _>(EmbeddedAssetPlugin::default()),))
         .add_loading_state(
             LoadingState::new(AppState::Loading).continue_to_state(AppState::StartMenu),
         )

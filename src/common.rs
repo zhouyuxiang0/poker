@@ -22,21 +22,21 @@ pub enum AppState {
 
 #[derive(AssetCollection, Resource)]
 pub struct MyAssets {
-    #[asset(path = "sounds/bg.mp3")]
+    #[asset(path = "embedded://sounds/bg.mp3")]
     pub game_bg: Handle<AudioSource>,
-    #[asset(path = "sounds/duizi.mp3")]
+    #[asset(path = "embedded://sounds/duizi.mp3")]
     pub duizi: Handle<AudioSource>,
-    #[asset(path = "sounds/fapai.mp3")]
+    #[asset(path = "embedded://sounds/fapai.mp3")]
     pub fapai: Handle<AudioSource>,
-    #[asset(path = "sounds/login_bg.ogg")]
+    #[asset(path = "embedded://sounds/login_bg.ogg")]
     pub login_bg: Handle<AudioSource>,
-    #[asset(path = "sounds/man_san_dai_yi_dui.ogg")]
+    #[asset(path = "embedded://sounds/man_san_dai_yi_dui.ogg")]
     pub man_san_dai_yi: Handle<AudioSource>,
-    #[asset(path = "sounds/start_a.ogg")]
+    #[asset(path = "embedded://sounds/start_a.ogg")]
     pub start: Handle<AudioSource>,
-    #[asset(path = "sounds/woman_bu_jiao.ogg")]
+    #[asset(path = "embedded://sounds/woman_bu_jiao.ogg")]
     pub woman_bu_jiao: Handle<AudioSource>,
-    #[asset(path = "sounds/woman_jiao_di_zhu.ogg")]
+    #[asset(path = "embedded://sounds/woman_jiao_di_zhu.ogg")]
     pub woman_jiao_di_zhu: Handle<AudioSource>,
 
     #[asset(texture_atlas(
@@ -49,32 +49,32 @@ pub struct MyAssets {
         offset_x = 0.,
         offset_y = 0.
     ))]
-    #[asset(path = "image/card/card.png")]
+    #[asset(path = "embedded://image/card/card.png")]
     pub card: Handle<TextureAtlas>,
 
-    #[asset(path = "image/youqing_girl.png")]
+    #[asset(path = "embedded://image/youqing_girl.png")]
     pub you_qing_girl: Handle<Image>,
-    #[asset(path = "image/youqing_boy.png")]
+    #[asset(path = "embedded://image/youqing_boy.png")]
     pub you_qing_boy: Handle<Image>,
-    #[asset(path = "image/tip.png")]
+    #[asset(path = "embedded://image/tip.png")]
     pub tip: Handle<Image>,
-    #[asset(path = "bg_login.jpg")]
+    #[asset(path = "embedded://bg_login.jpg")]
     pub bg_login: Handle<Image>,
-    #[asset(path = "loading_bg.png")]
+    #[asset(path = "embedded://loading_bg.png")]
     pub loading_bg: Handle<Image>,
-    #[asset(path = "image/btn_enter_room.png")]
+    #[asset(path = "embedded://image/btn_enter_room.png")]
     pub btn_enter_room: Handle<Image>,
-    #[asset(path = "image/button/btn_weixin.png")]
+    #[asset(path = "embedded://image/button/btn_weixin.png")]
     pub btn_weixin: Handle<Image>,
-    #[asset(path = "image/button/btn_ traveler.png")]
+    #[asset(path = "embedded://image/button/btn_ traveler.png")]
     pub btn_traveler: Handle<Image>,
-    #[asset(path = "image/yonghuxieyi.png")]
+    #[asset(path = "embedded://image/yonghuxieyi.png")]
     pub yonghuxieyi: Handle<Image>,
-    #[asset(path = "image/check_mark.png")]
+    #[asset(path = "embedded://image/check_mark.png")]
     pub check_mark: Handle<Image>,
-    #[asset(path = "image/btn_create_room.png")]
+    #[asset(path = "embedded://image/btn_create_room.png")]
     pub btn_create_room: Handle<Image>,
-    #[asset(path = "table_bg_1.jpg")]
+    #[asset(path = "embedded://table_bg_1.jpg")]
     pub table_bg_1: Handle<Image>,
 }
 
@@ -163,6 +163,5 @@ pub fn despawn_screen<T: Component>(to_despawn: Query<Entity, With<T>>, mut comm
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum Event {
-    SyncWaitPlayers(Vec<PeerId>),
-    SyncRooms(Vec<Room>),
+    SyncRoom(Room),
 }

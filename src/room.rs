@@ -14,14 +14,35 @@ struct Peer {
     cursor: Entity,
 }
 struct Peers(HashMap<CollabId, Peer>);
-#[derive(Component, Serialize, Deserialize, Clone, Copy, Debug)]
+#[derive(Resource, Serialize, Deserialize, Clone, Copy, Debug)]
 pub struct Room {
+    pub id: PeerId,
     pub local_player: PeerId,
     pub player1: Option<PeerId>,
     pub player2: Option<PeerId>,
 }
 
-pub struct Rooms(Vec<Vec3>);
+impl Room {
+    pub fn new(peer: PeerId) -> Self {
+        Self {
+            id: peer,
+            local_player: peer,
+            player1: None,
+            player2: None,
+        }
+    }
+}
+
+impl PartialEq for Room {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl Eq for Room {}
+
+#[derive(Resource)]
+pub struct Rooms(Vec<Room>);
 
 pub fn setup_room(mut commands: Commands, assets: Res<MyAssets>) {
     commands

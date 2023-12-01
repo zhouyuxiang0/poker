@@ -64,7 +64,11 @@ impl Lobby {
     }
 
     fn remove_player(&mut self, p: PeerId) {
-        self.wait_players.retain(|peer| peer == &p);
+        self.wait_players.retain(|peer| peer != &p);
+    }
+
+    fn add_room(&mut self, room: Room) {
+        self.rooms.push(room);
     }
 }
 
@@ -167,17 +171,30 @@ pub fn setup_lobby(mut commands: Commands, asset: Res<MyAssets>) {
 }
 
 pub fn lobby_button_press_system(
+    mut commands: Commands,
     query: Query<(&Interaction, &LobbyButton), (Changed<Interaction>, With<Button>)>,
     mut state: ResMut<NextState<AppState>>,
+    mut lobby: ResMut<Lobby>,
 ) {
     for (interaction, button) in query.iter() {
         if *interaction == Interaction::Pressed {
             match button {
                 LobbyButton::EnterRoom => {
+                    // 加入房间 没有房间则创建 有则加入
                     state.set(AppState::InRoom);
                 }
                 LobbyButton::CreateRoom => {
-                    // println!("weixin");
+                    // 创建房间 通知其他客户端房间信息
+                    if let Some(peer) = lobby.socket.id() {
+                        let room = Room::new(peer);
+                        commands.insert_resource(room);
+                        lobby.add_room(room);
+                        // 与其他客户端同步room信息
+                        lobby.send(AddressedEvent {
+                            src: peer,
+                            event: Event::SyncRoom(room),
+                        });
+                    }
                 }
             }
         }
@@ -189,28 +206,22 @@ pub fn lobby_system(mut lobby: ResMut<Lobby>) {
         match new_state {
             PeerState::Connected => {
                 lobby.join(peer);
-                info!("在线人数 {}", lobby.socket.players().len());
-                info!("{:?}", lobby.wait_players);
             }
             PeerState::Disconnected => {
                 lobby.remove_player(peer);
-                info!("peer {peer:?} disconnected");
-                info!("在线人数 {}", lobby.socket.players().len());
-                info!("{:?}", lobby.wait_players);
             }
         }
     }
-    if lobby.socket.id().is_some() {
-        let src = lobby.socket.id().unwrap();
-        let rooms = lobby.rooms.to_owned();
-        lobby.send(AddressedEvent {
-            src,
-            event: Event::SyncRooms(rooms),
-        });
+    if let Some(local_peer) = lobby.socket.id() {
+        if !lobby.wait_players.contains(&local_peer) {
+            lobby.join(local_peer);
+        }
     }
+    // info!("{:?}", lobby.wait_players);
 }
 
 pub fn receive_events(mut lobby: ResMut<Lobby>) {
+    // 接收room消息 将room收集为rooms
     let binding = lobby.receive();
     let events = Vec::from_iter(
         binding
@@ -219,11 +230,11 @@ pub fn receive_events(mut lobby: ResMut<Lobby>) {
     );
     for AddressedEvent { src, event } in events {
         match event {
-            Event::SyncRooms(rooms) => {
-                // println!("{rooms:?}");
-            }
-            Event::SyncWaitPlayers(wait_players) => {
-                //
+            Event::SyncRoom(room) => {
+                if !lobby.rooms.contains(room) {
+                    println!("add new room {:?}", room);
+                    lobby.add_room(room.to_owned());
+                }
             }
         }
     }
