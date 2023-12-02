@@ -1,9 +1,11 @@
 use bevy::{prelude::*, utils::HashMap};
-use bevy_ggrs::{ggrs::DesyncDetection, prelude::*};
 use bevy_matchbox::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::common::{AppState, MyAssets};
+use crate::{
+    common::{despawn_screen, AddressedEvent, AppState, Event, MyAssets, MyPeer, Socket},
+    lobby::Lobby,
+};
 
 type Config = bevy_ggrs::GgrsConfig<u8, PeerId>;
 
@@ -14,26 +16,61 @@ struct Peer {
     cursor: Entity,
 }
 struct Peers(HashMap<CollabId, Peer>);
-#[derive(Resource, Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
+#[derive(Resource, Serialize, Deserialize, Clone, Copy, Debug)]
 pub struct Room {
-    pub player1: PeerId,
+    pub id: PeerId,
+    pub local_player: PeerId,
+    pub player1: Option<PeerId>,
     pub player2: Option<PeerId>,
-    pub player3: Option<PeerId>,
 }
 
 impl Room {
-    pub fn new(peer_id: PeerId) -> Self {
-        Self {
-            player1: peer_id,
-            player2: None,
-            player3: None,
+    pub fn join(&mut self, peer: PeerId) {
+        if self.player1.is_none() {
+            self.player1 = Some(peer)
+        } else if self.player2.is_none() {
+            self.player2 = Some(peer)
         }
     }
 }
 
+#[derive(Component)]
+pub struct RoomComponent;
+
+impl Room {
+    pub fn new(peer: PeerId) -> Self {
+        Self {
+            id: peer,
+            local_player: peer,
+            player1: None,
+            player2: None,
+        }
+    }
+}
+
+impl PartialEq for Room {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl Eq for Room {}
+
+#[derive(Resource)]
 pub struct Rooms(Vec<Room>);
 
-pub fn setup_room(mut commands: Commands, assets: Res<MyAssets>) {
+impl Plugin for RoomComponent {
+    fn build(&self, app: &mut App) {
+        app.add_systems(OnEnter(AppState::InRoom), setup_room)
+            .add_systems(
+                Update,
+                (publish_room, receive_events).run_if(in_state(AppState::InRoom)),
+            )
+            .add_systems(OnExit(AppState::InRoom), despawn_screen::<RoomComponent>);
+    }
+}
+
+pub fn setup_room(mut commands: Commands, assets: Res<MyAssets>, room: ResMut<Room>) {
     commands
         .spawn((
             NodeBundle {
@@ -46,47 +83,115 @@ pub fn setup_room(mut commands: Commands, assets: Res<MyAssets>) {
                 },
                 ..Default::default()
             },
-            // Room,
+            RoomComponent,
         ))
         .with_children(|parent| {
             parent.spawn(ImageBundle {
                 image: assets.table_bg_1.clone().into(),
                 style: Style {
+                    width: Val::Percent(100.),
                     ..Default::default()
                 },
                 ..default()
             });
+            parent.spawn(TextBundle {
+                text: Text::from_section(
+                    "player 1",
+                    TextStyle {
+                        font: assets.font.clone(),
+                        font_size: 24.0,
+                        color: Color::GOLD,
+                        ..Default::default()
+                    },
+                )
+                .with_alignment(TextAlignment::Center),
+                style: Style {
+                    margin: UiRect::all(Val::Px(10.0)),
+                    position_type: PositionType::Absolute,
+                    top: Val::Px(525.),
+                    left: Val::Px(70.),
+                    ..Default::default()
+                },
+                ..default()
+            });
+            if room.player1.is_some() {
+                parent.spawn(TextBundle {
+                    text: Text::from_section(
+                        "player 2",
+                        TextStyle {
+                            font: assets.font.clone(),
+                            font_size: 24.0,
+                            color: Color::GOLD,
+                            ..Default::default()
+                        },
+                    )
+                    .with_alignment(TextAlignment::Center),
+                    style: Style {
+                        margin: UiRect::all(Val::Px(10.0)),
+                        position_type: PositionType::Absolute,
+                        top: Val::Px(70.),
+                        left: Val::Px(70.),
+                        ..Default::default()
+                    },
+                    ..default()
+                });
+            }
+            parent.spawn(ImageBundle {
+                image: assets.room_touxiang.clone().into(),
+                style: Style {
+                    // width: Val::Px(70.),
+                    // height: Val::Px(50.),
+                    margin: UiRect::all(Val::Px(10.0)),
+                    position_type: PositionType::Absolute,
+                    top: Val::Px(550.),
+                    left: Val::Px(50.),
+                    ..Default::default()
+                },
+                ..Default::default()
+            });
         });
 }
 
-pub fn wait_for_players(
-    mut commands: Commands,
-    mut socket: ResMut<MatchboxSocket<SingleChannel>>,
-    mut next_state: ResMut<NextState<AppState>>,
+pub fn publish_room(mut lobby: ResMut<Lobby>, room: ResMut<Room>, mut socket: ResMut<Socket>) {
+    let peers = socket
+        .unreliable_connected_peers()
+        .collect::<Vec<PeerId>>()
+        .to_owned();
+    socket.send_unreliable(
+        AddressedEvent {
+            src: room.local_player,
+            event: Event::SyncRoom(*room),
+        },
+        peers,
+    );
+}
+
+pub fn receive_events(
+    mut lobby: ResMut<Lobby>,
+    mut room: ResMut<Room>,
+    mut peer: ResMut<MyPeer>,
+    mut socket: ResMut<Socket>,
 ) {
-    if socket.get_channel(0).is_err() {
-        return;
+    let binding = socket.receive_unreliable();
+    let events = Vec::from_iter(
+        binding.iter(), // .filter(|e| e.src != lobby.socket.id().unwrap()),
+    );
+    for AddressedEvent { src, event } in events {
+        match event {
+            Event::JoinRoom => {
+                if room.player1.is_none() || room.player2.is_none() {
+                    room.join(*src);
+                    socket.send_unreliable(
+                        AddressedEvent {
+                            src: peer.0,
+                            event: Event::JoinRoomSuccess(*room),
+                        },
+                        vec![*src],
+                    );
+                }
+            }
+            Event::Test(_) => todo!(),
+            _ => {}
+        }
     }
-    socket.update_peers();
-    let players = socket.players();
-    let num_players = 2;
-    if players.len() < num_players {
-        // 等待更多玩家
-        return;
-    }
-    let mut session_builder = SessionBuilder::<Config>::new()
-        .with_num_players(num_players)
-        .with_desync_detection_mode(DesyncDetection::On { interval: 1 });
-    for (i, player) in players.into_iter().enumerate() {
-        session_builder = session_builder
-            .add_player(player, i)
-            .expect("failed to add player");
-    }
-    let socket = socket.take_channel(0).unwrap();
-    let ggrs_session = session_builder
-        .start_p2p_session(socket)
-        .expect("failed to start session");
-    commands.insert_resource(bevy_ggrs::Session::P2P(ggrs_session));
-    println!("playing...");
-    next_state.set(AppState::Playing);
 }

@@ -7,8 +7,9 @@ mod room;
 mod start_menu;
 
 use bevy_asset_loader::prelude::*;
-use lobby::LobbyPlugin;
-use room::{setup_room, wait_for_players};
+use bevy_embedded_assets::EmbeddedAssetPlugin;
+use lobby::LobbyComponent;
+use room::RoomComponent;
 use start_menu::StartMenuPlugin;
 
 use common::{AppState, MyAssets};
@@ -18,15 +19,17 @@ const BACKGROUND_COLOR: Color = Color::BLACK;
 fn main() {
     App::new()
         .add_state::<AppState>()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "poker".into(),
-                fit_canvas_to_parent: true,
-                resizable: false,
+        .add_plugins((DefaultPlugins
+            .set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: "poker".into(),
+                    fit_canvas_to_parent: true,
+                    resizable: false,
+                    ..Default::default()
+                }),
                 ..Default::default()
-            }),
-            ..Default::default()
-        }))
+            })
+            .add_before::<bevy::asset::AssetPlugin, _>(EmbeddedAssetPlugin::default()),))
         .add_loading_state(
             LoadingState::new(AppState::Loading).continue_to_state(AppState::StartMenu),
         )
@@ -34,9 +37,8 @@ fn main() {
         .insert_resource(ClearColor(BACKGROUND_COLOR))
         .add_systems(Startup, setup)
         .add_plugins(StartMenuPlugin)
-        .add_plugins(LobbyPlugin)
-        .add_systems(OnEnter(AppState::InRoom), setup_room)
-        // .add_systems(Update, wait_for_players.run_if(in_state(AppState::InRoom)))
+        .add_plugins(LobbyComponent)
+        .add_plugins(RoomComponent)
         .run();
 }
 fn setup(mut commands: Commands) {

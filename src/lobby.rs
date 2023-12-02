@@ -6,12 +6,12 @@ use bevy_matchbox::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    common::{despawn_screen, AppState, Event, MyAssets},
+    common::{despawn_screen, AddressedEvent, AppState, Event, MyAssets, MyPeer, Socket},
     room::{Room, Rooms},
 };
 
 #[derive(Component)]
-pub struct LobbyPlugin;
+pub struct LobbyComponent;
 
 #[derive(Component)]
 pub enum LobbyButton {
@@ -19,43 +19,18 @@ pub enum LobbyButton {
     CreateRoom,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
-pub struct AddressedEvent {
-    src: PeerId,
-    event: Event,
-}
-
 #[derive(Resource)]
 pub struct Lobby {
-    pub wait_players: Vec<PeerId>,
-    socket: MatchboxSocket<SingleChannel>,
-    pub rooms: Vec<Room>,
+    wait_players: Vec<PeerId>,
+    // pub(crate) socket: MatchboxSocket<SingleChannel>,
+    rooms: Vec<Room>,
 }
 
 impl Lobby {
-    pub fn new(mut socket: MatchboxSocket<SingleChannel>) -> Self {
+    pub fn new() -> Self {
         Self {
             wait_players: vec![],
-            socket,
             rooms: vec![],
-        }
-    }
-
-    fn receive(&mut self) -> Vec<AddressedEvent> {
-        self.socket
-            .receive()
-            .iter()
-            .map(|(_, payload)| payload)
-            .filter_map(|payload| ciborium::de::from_reader(&payload[..]).ok())
-            .collect()
-    }
-
-    fn send(&mut self, event: AddressedEvent) {
-        let mut payload = Vec::new();
-        ciborium::ser::into_writer(&event, &mut payload).unwrap();
-        let peers: Vec<_> = self.socket.connected_peers().collect();
-        for peer in peers {
-            self.socket.send(payload.clone().into(), peer);
         }
     }
 
@@ -64,7 +39,11 @@ impl Lobby {
     }
 
     fn remove_player(&mut self, p: PeerId) {
-        self.wait_players.retain(|peer| peer == &p);
+        self.wait_players.retain(|peer| peer != &p);
+    }
+
+    fn add_room(&mut self, room: Room) {
+        self.rooms.push(room);
     }
 
     fn contact_rooms(&mut self, rooms: Vec<Room>) {
@@ -77,15 +56,15 @@ impl Lobby {
     }
 }
 
-impl Plugin for LobbyPlugin {
+impl Plugin for LobbyComponent {
     fn build(&self, app: &mut App) {
         app.add_systems(OnEnter(AppState::Lobby), setup_lobby)
             .add_systems(
                 Update,
-                (lobby_button_press_system, receive_events, lobby_system)
+                (lobby_system, lobby_button_press_system, receive_events)
                     .run_if(in_state(AppState::Lobby)),
             )
-            .add_systems(OnExit(AppState::Lobby), (despawn_screen::<LobbyPlugin>,));
+            .add_systems(OnExit(AppState::Lobby), (despawn_screen::<LobbyComponent>,));
     }
 }
 
@@ -102,7 +81,7 @@ pub fn setup_lobby(mut commands: Commands, asset: Res<MyAssets>) {
                 },
                 ..Default::default()
             },
-            LobbyPlugin,
+            LobbyComponent,
         ))
         .with_children(|parent| {
             parent.spawn(ImageBundle {
@@ -184,72 +163,102 @@ pub fn lobby_button_press_system(
     query: Query<(&Interaction, &LobbyButton), (Changed<Interaction>, With<Button>)>,
     mut state: ResMut<NextState<AppState>>,
     mut lobby: ResMut<Lobby>,
+    mut socket: ResMut<Socket>,
 ) {
     for (interaction, button) in query.iter() {
         if *interaction == Interaction::Pressed {
             match button {
                 LobbyButton::EnterRoom => {
-                    state.set(AppState::InRoom);
+                    if let Some(peer) = socket.unreliable_id() {
+                        // 加入房间 没有房间则创建 有则加入
+                        let rooms = lobby.rooms.to_owned();
+                        if let Some(room) = rooms
+                            .iter()
+                            .find(|r| r.player1.is_none() || r.player2.is_none())
+                        {
+                            socket.send_unreliable(
+                                AddressedEvent {
+                                    src: peer,
+                                    event: Event::JoinRoom,
+                                },
+                                vec![room.id],
+                            );
+                        } else {
+                            // create
+                        }
+                        state.set(AppState::InRoom);
+                    }
                 }
                 LobbyButton::CreateRoom => {
-                    let room = Room::new(lobby.socket.id().unwrap());
-                    commands.insert_resource(room);
-                    state.set(AppState::InRoom);
+                    // 创建房间 通知其他客户端房间信息
+                    if let Some(peer) = socket.unreliable_id() {
+                        let room = Room::new(peer);
+                        commands.insert_resource(room);
+                        commands.insert_resource(MyPeer::new(peer));
+                        lobby.add_room(room);
+                        // 与其他客户端同步room信息
+                        let peers = socket
+                            .unreliable_connected_peers()
+                            .collect::<Vec<PeerId>>()
+                            .to_owned();
+                        socket.send_unreliable(
+                            AddressedEvent {
+                                src: peer,
+                                event: Event::SyncRoom(room),
+                            },
+                            peers,
+                        );
+                        state.set(AppState::InRoom);
+                    }
                 }
             }
         }
     }
 }
 
-pub fn lobby_system(mut lobby: ResMut<Lobby>) {
-    let mut add_wait_players = vec![];
-    let mut remove_wait_players = vec![];
-    for (peer, new_state) in lobby.socket.update_peers() {
+pub fn lobby_system(mut lobby: ResMut<Lobby>, mut socket: ResMut<Socket>) {
+    for (peer, new_state) in socket.update_peers_unreliable() {
         match new_state {
             PeerState::Connected => {
-                add_wait_players.push(peer);
+                lobby.join(peer);
             }
             PeerState::Disconnected => {
-                remove_wait_players.push(peer);
+                lobby.remove_player(peer);
             }
         }
     }
-    if lobby.socket.id().is_some() {
-        let src = lobby.socket.id().unwrap();
-        let rooms = lobby.rooms.to_owned();
-        let wait_players = lobby.wait_players.to_owned();
-        lobby.send(AddressedEvent {
-            src,
-            event: Event::SyncLobby {
-                wait_players,
-                add_wait_players,
-                remove_wait_players,
-                rooms,
-                // add_rooms: todo!(),
-                // remove_rooms: todo!(),
-            },
-        });
+    if let Some(local_peer) = socket.unreliable_id() {
+        if !lobby.wait_players.contains(&local_peer) {
+            lobby.join(local_peer);
+        }
     }
 }
 
-pub fn receive_events(mut lobby: ResMut<Lobby>) {
-    let binding = lobby.receive();
-    let events = Vec::from_iter(
-        binding
-            .iter()
-            .filter(|e| e.src != lobby.socket.id().unwrap()),
-    );
-    // for AddressedEvent { src, event } in events {
-    //     match event {
-    //         Event::SyncLobby {
-    //             wait_players,
-    //             rooms,
-    //             add_wait_players,
-    //             remove_wait_players,
-    //         } => {
-    //             lobby.contact_rooms(rooms.to_vec());
-    //             // lobby.wait_players.
-    //         }
-    //     }
-    // }
+pub fn receive_events(
+    mut commands: Commands,
+    mut lobby: ResMut<Lobby>,
+    mut state: ResMut<NextState<AppState>>,
+    mut socket: ResMut<Socket>,
+) {
+    // 接收room消息 将room收集为rooms
+    // let binding = socket.receive_unreliable();
+    // let events = Vec::from_iter(
+    //     binding.iter(), // .filter(|e| e.src != lobby.socket.id().unwrap()),
+    // );
+    for AddressedEvent { src, event } in socket.receive_unreliable() {
+        match event {
+            Event::SyncRoom(room) => {
+                if !lobby.rooms.contains(&room) {
+                    println!("add new room {:?}", room);
+                    lobby.add_room(room.to_owned());
+                }
+            }
+            Event::JoinRoomSuccess(room) => {
+                commands.insert_resource(room.to_owned());
+                state.set(AppState::InRoom);
+            }
+            Event::Test(_) => todo!(),
+            _ => {}
+        }
+    }
 }
