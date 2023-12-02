@@ -118,7 +118,7 @@ pub fn menu_button_press_system(
                 MenuButton::Traveler => {
                     let room_url = "ws://47.108.130.232:3536/poker";
                     info!("connecting to matchbox server: {room_url}");
-                    let mut socket = MatchboxSocket::new_ggrs(room_url);
+                    let socket = MatchboxSocket::new_ggrs(room_url);
                     let lobby = Lobby::new();
                     let socket = Socket::new(socket);
                     commands.insert_resource(lobby);

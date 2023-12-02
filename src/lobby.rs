@@ -1,13 +1,9 @@
 use bevy::prelude::*;
-use bevy_matchbox::{
-    matchbox_socket::{PeerId, PeerState, SingleChannel},
-    MatchboxSocket,
-};
-use serde::{Deserialize, Serialize};
+use bevy_matchbox::matchbox_socket::{PeerId, PeerState};
 
 use crate::{
     common::{despawn_screen, AddressedEvent, AppState, Event, MyAssets, MyPeer, Socket},
-    room::{Room, Rooms},
+    room::Room,
 };
 
 #[derive(Component)]
@@ -245,7 +241,7 @@ pub fn receive_events(
     // let events = Vec::from_iter(
     //     binding.iter(), // .filter(|e| e.src != lobby.socket.id().unwrap()),
     // );
-    for AddressedEvent { src, event } in socket.receive_unreliable() {
+    for AddressedEvent { src: _, event } in socket.receive_unreliable() {
         match event {
             Event::SyncRoom(room) => {
                 if !lobby.rooms.contains(&room) {

@@ -152,7 +152,7 @@ pub fn setup_room(mut commands: Commands, assets: Res<MyAssets>, room: ResMut<Ro
         });
 }
 
-pub fn publish_room(mut lobby: ResMut<Lobby>, room: ResMut<Room>, mut socket: ResMut<Socket>) {
+pub fn publish_room(_lobby: ResMut<Lobby>, room: ResMut<Room>, mut socket: ResMut<Socket>) {
     let peers = socket
         .unreliable_connected_peers()
         .collect::<Vec<PeerId>>()
@@ -167,9 +167,9 @@ pub fn publish_room(mut lobby: ResMut<Lobby>, room: ResMut<Room>, mut socket: Re
 }
 
 pub fn receive_events(
-    mut lobby: ResMut<Lobby>,
+    _lobby: ResMut<Lobby>,
     mut room: ResMut<Room>,
-    mut peer: ResMut<MyPeer>,
+    peer: ResMut<MyPeer>,
     mut socket: ResMut<Socket>,
 ) {
     let binding = socket.receive_unreliable();
