@@ -1,5 +1,8 @@
 // #![windows_subsystem = "windows"]
-use bevy::prelude::*;
+use bevy::{
+    prelude::*,
+    window::{WindowMode, WindowResolution},
+};
 
 mod common;
 mod lobby;

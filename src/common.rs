@@ -173,15 +173,6 @@ pub enum Event {
     Test(i32),
 }
 
-#[derive(Resource)]
-pub struct MyPeer(pub PeerId);
-
-impl MyPeer {
-    pub fn new(peer: PeerId) -> Self {
-        Self(peer)
-    }
-}
-
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct AddressedEvent {
     pub(crate) src: PeerId,
@@ -219,7 +210,8 @@ impl Socket {
         self.unreliable.id()
     }
 
-    pub fn unreliable_connected_peers(&self) -> impl std::iter::Iterator<Item = PeerId> + '_ {
+    pub fn unreliable_connected_peers(&mut self) -> impl std::iter::Iterator<Item = PeerId> + '_ {
+        self.update_peers_unreliable();
         self.unreliable.connected_peers()
     }
 

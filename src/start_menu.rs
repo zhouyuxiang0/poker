@@ -31,74 +31,77 @@ pub fn setup_start_menu(mut commands: Commands, assets: Res<MyAssets>) {
                     width: Val::Percent(100.),
                     height: Val::Percent(100.),
                     align_items: AlignItems::Center,
-                    justify_content: JustifyContent::Center,
                     ..default()
                 },
                 ..Default::default()
             },
             StartMenuPlugin,
         ))
-        .with_children(|parent| {
-            parent.spawn(ImageBundle {
-                image: assets.loading_bg.clone().into(),
-                ..default()
-            });
-            parent
-                .spawn(ButtonBundle {
-                    image: assets.btn_weixin.clone().into(),
+        .with_children(|builder| {
+            builder
+                .spawn(ImageBundle {
+                    image: assets.loading_bg.clone().into(),
                     style: Style {
-                        width: Val::Px(200.),
-                        height: Val::Px(60.),
-                        margin: UiRect::all(Val::Px(10.0)),
-                        position_type: PositionType::Absolute,
-                        top: Val::Px(290.),
-                        left: Val::Px(30.),
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                })
-                .insert(MenuButton::Weixin);
-            parent
-                .spawn(ButtonBundle {
-                    image: assets.btn_traveler.clone().into(),
-                    style: Style {
-                        width: Val::Px(200.),
-                        height: Val::Px(60.),
-                        margin: UiRect::all(Val::Px(10.0)),
-                        position_type: PositionType::Absolute,
-                        top: Val::Px(200.),
-                        left: Val::Px(30.),
+                        width: Val::Percent(100.),
+                        height: Val::Percent(100.),
                         ..Default::default()
                     },
                     ..default()
                 })
-                .insert(MenuButton::Traveler);
-            parent.spawn(ButtonBundle {
-                image: assets.yonghuxieyi.clone().into(),
-                style: Style {
-                    width: Val::Px(400.),
-                    height: Val::Px(50.),
-                    margin: UiRect::all(Val::Px(10.0)),
-                    position_type: PositionType::Absolute,
-                    top: Val::Px(600.),
-                    left: Val::Px(400.),
-                    ..Default::default()
-                },
-                ..default()
-            });
-            parent.spawn(ImageBundle {
-                image: assets.check_mark.clone().into(),
-                style: Style {
-                    width: Val::Px(70.),
-                    height: Val::Px(50.),
-                    margin: UiRect::all(Val::Px(10.0)),
-                    position_type: PositionType::Absolute,
-                    top: Val::Px(600.),
-                    left: Val::Px(395.),
-                    ..Default::default()
-                },
-                ..default()
-            });
+                .with_children(|builder| {
+                    builder
+                        .spawn(ButtonBundle {
+                            image: assets.btn_weixin.clone().into(),
+                            style: Style {
+                                width: Val::Percent(16.),
+                                height: Val::Percent(9.),
+                                position_type: PositionType::Absolute,
+                                top: Val::Percent(41.),
+                                left: Val::Percent(2.),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        })
+                        .insert(MenuButton::Weixin);
+                    builder
+                        .spawn(ButtonBundle {
+                            image: assets.btn_traveler.clone().into(),
+                            style: Style {
+                                width: Val::Percent(16.),
+                                height: Val::Percent(9.),
+                                position_type: PositionType::Absolute,
+                                top: Val::Percent(30.),
+                                left: Val::Percent(2.),
+                                ..Default::default()
+                            },
+                            ..default()
+                        })
+                        .insert(MenuButton::Traveler);
+                    builder.spawn(ButtonBundle {
+                        image: assets.yonghuxieyi.clone().into(),
+                        style: Style {
+                            width: Val::Percent(34.),
+                            height: Val::Percent(6.),
+                            position_type: PositionType::Absolute,
+                            top: Val::Percent(85.5),
+                            left: Val::Percent(32.5),
+                            ..Default::default()
+                        },
+                        ..default()
+                    });
+                    builder.spawn(ImageBundle {
+                        image: assets.check_mark.clone().into(),
+                        style: Style {
+                            width: Val::Percent(5.),
+                            height: Val::Percent(7.),
+                            position_type: PositionType::Absolute,
+                            top: Val::Percent(85.),
+                            left: Val::Percent(34.),
+                            ..Default::default()
+                        },
+                        ..default()
+                    });
+                });
         });
     // commands.spawn(AudioBundle {
     //     source: assets.login_bg.clone(),

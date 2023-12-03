@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_matchbox::matchbox_socket::{PeerId, PeerState};
 
 use crate::{
-    common::{despawn_screen, AddressedEvent, AppState, Event, MyAssets, MyPeer, Socket},
+    common::{despawn_screen, AddressedEvent, AppState, Event, MyAssets, Socket},
     room::Room,
 };
 
@@ -18,7 +18,6 @@ pub enum LobbyButton {
 #[derive(Resource)]
 pub struct Lobby {
     wait_players: Vec<PeerId>,
-    // pub(crate) socket: MatchboxSocket<SingleChannel>,
     rooms: Vec<Room>,
 }
 
@@ -170,8 +169,9 @@ pub fn lobby_button_press_system(
                         let rooms = lobby.rooms.to_owned();
                         if let Some(room) = rooms
                             .iter()
-                            .find(|r| r.player1.is_none() || r.player2.is_none())
+                            .find(|r| r.player2.is_none() || r.player3.is_none())
                         {
+                            println!("请求加入房间{:?}", room);
                             socket.send_unreliable(
                                 AddressedEvent {
                                     src: peer,
@@ -182,7 +182,6 @@ pub fn lobby_button_press_system(
                         } else {
                             // create
                         }
-                        state.set(AppState::InRoom);
                     }
                 }
                 LobbyButton::CreateRoom => {
@@ -190,7 +189,6 @@ pub fn lobby_button_press_system(
                     if let Some(peer) = socket.unreliable_id() {
                         let room = Room::new(peer);
                         commands.insert_resource(room);
-                        commands.insert_resource(MyPeer::new(peer));
                         lobby.add_room(room);
                         // 与其他客户端同步room信息
                         let peers = socket
@@ -237,10 +235,6 @@ pub fn receive_events(
     mut socket: ResMut<Socket>,
 ) {
     // 接收room消息 将room收集为rooms
-    // let binding = socket.receive_unreliable();
-    // let events = Vec::from_iter(
-    //     binding.iter(), // .filter(|e| e.src != lobby.socket.id().unwrap()),
-    // );
     for AddressedEvent { src: _, event } in socket.receive_unreliable() {
         match event {
             Event::SyncRoom(room) => {
@@ -251,6 +245,7 @@ pub fn receive_events(
             }
             Event::JoinRoomSuccess(room) => {
                 commands.insert_resource(room.to_owned());
+                lobby.add_room(room);
                 state.set(AppState::InRoom);
             }
             Event::Test(_) => todo!(),

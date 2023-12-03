@@ -3,7 +3,7 @@ use bevy_matchbox::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    common::{despawn_screen, AddressedEvent, AppState, Event, MyAssets, MyPeer, Socket},
+    common::{despawn_screen, AddressedEvent, AppState, Event, MyAssets, Socket},
     lobby::Lobby,
 };
 
@@ -19,17 +19,17 @@ struct Peers(HashMap<CollabId, Peer>);
 #[derive(Resource, Serialize, Deserialize, Clone, Copy, Debug)]
 pub struct Room {
     pub id: PeerId,
-    pub local_player: PeerId,
-    pub player1: Option<PeerId>,
+    pub player1: PeerId,
     pub player2: Option<PeerId>,
+    pub player3: Option<PeerId>,
 }
 
 impl Room {
     pub fn join(&mut self, peer: PeerId) {
-        if self.player1.is_none() {
-            self.player1 = Some(peer)
-        } else if self.player2.is_none() {
+        if self.player2.is_none() {
             self.player2 = Some(peer)
+        } else if self.player3.is_none() {
+            self.player3 = Some(peer)
         }
     }
 }
@@ -41,9 +41,9 @@ impl Room {
     pub fn new(peer: PeerId) -> Self {
         Self {
             id: peer,
-            local_player: peer,
-            player1: None,
+            player1: peer,
             player2: None,
+            player3: None,
         }
     }
 }
@@ -70,7 +70,12 @@ impl Plugin for RoomComponent {
     }
 }
 
-pub fn setup_room(mut commands: Commands, assets: Res<MyAssets>, room: ResMut<Room>) {
+pub fn setup_room(
+    mut commands: Commands,
+    assets: Res<MyAssets>,
+    room: ResMut<Room>,
+    mut socket: ResMut<Socket>,
+) {
     commands
         .spawn((
             NodeBundle {
@@ -94,9 +99,19 @@ pub fn setup_room(mut commands: Commands, assets: Res<MyAssets>, room: ResMut<Ro
                 },
                 ..default()
             });
+            let local_player = socket.unreliable_id();
+            let play_name = if room.player1 == local_player.unwrap() {
+                "player 1"
+            } else if room.player2 == local_player {
+                "player 2"
+            } else if room.player3 == local_player {
+                "player 3"
+            } else {
+                unreachable!()
+            };
             parent.spawn(TextBundle {
                 text: Text::from_section(
-                    "player 1",
+                    play_name,
                     TextStyle {
                         font: assets.font.clone(),
                         font_size: 24.0,
@@ -114,28 +129,6 @@ pub fn setup_room(mut commands: Commands, assets: Res<MyAssets>, room: ResMut<Ro
                 },
                 ..default()
             });
-            if room.player1.is_some() {
-                parent.spawn(TextBundle {
-                    text: Text::from_section(
-                        "player 2",
-                        TextStyle {
-                            font: assets.font.clone(),
-                            font_size: 24.0,
-                            color: Color::GOLD,
-                            ..Default::default()
-                        },
-                    )
-                    .with_alignment(TextAlignment::Center),
-                    style: Style {
-                        margin: UiRect::all(Val::Px(10.0)),
-                        position_type: PositionType::Absolute,
-                        top: Val::Px(70.),
-                        left: Val::Px(70.),
-                        ..Default::default()
-                    },
-                    ..default()
-                });
-            }
             parent.spawn(ImageBundle {
                 image: assets.room_touxiang.clone().into(),
                 style: Style {
@@ -159,7 +152,7 @@ pub fn publish_room(_lobby: ResMut<Lobby>, room: ResMut<Room>, mut socket: ResMu
         .to_owned();
     socket.send_unreliable(
         AddressedEvent {
-            src: room.local_player,
+            src: room.player1,
             event: Event::SyncRoom(*room),
         },
         peers,
@@ -167,10 +160,12 @@ pub fn publish_room(_lobby: ResMut<Lobby>, room: ResMut<Room>, mut socket: ResMu
 }
 
 pub fn receive_events(
+    mut commands: Commands,
     _lobby: ResMut<Lobby>,
     mut room: ResMut<Room>,
-    peer: ResMut<MyPeer>,
     mut socket: ResMut<Socket>,
+    query: Query<Entity, With<RoomComponent>>,
+    assets: Res<MyAssets>,
 ) {
     let binding = socket.receive_unreliable();
     let events = Vec::from_iter(
@@ -179,15 +174,73 @@ pub fn receive_events(
     for AddressedEvent { src, event } in events {
         match event {
             Event::JoinRoom => {
-                if room.player1.is_none() || room.player2.is_none() {
+                if room.player2.is_none() || room.player3.is_none() {
                     room.join(*src);
+                    let s = socket.unreliable_id().unwrap();
                     socket.send_unreliable(
                         AddressedEvent {
-                            src: peer.0,
+                            src: s,
                             event: Event::JoinRoomSuccess(*room),
                         },
                         vec![*src],
                     );
+                    if room.player2.is_some() {
+                        // commands.spawn(TextBundle {
+                        //     text: Text::from_section(
+                        //         "player 2",
+                        //         TextStyle {
+                        //             font: assets.font.clone(),
+                        //             font_size: 24.0,
+                        //             color: Color::GOLD,
+                        //             ..Default::default()
+                        //         },
+                        //     )
+                        //     .with_alignment(TextAlignment::Center),
+                        //     style: Style {
+                        //         margin: UiRect::all(Val::Px(10.0)),
+                        //         position_type: PositionType::Absolute,
+                        //         top: Val::Px(70.),
+                        //         left: Val::Px(70.),
+                        //         ..Default::default()
+                        //     },
+                        //     ..default()
+                        // });
+                        // commands.spawn(ImageBundle {
+                        //     image: assets.room_touxiang.clone().into(),
+                        //     style: Style {
+                        //         // width: Val::Px(70.),
+                        //         // height: Val::Px(50.),
+                        //         margin: UiRect::all(Val::Px(10.0)),
+                        //         position_type: PositionType::Absolute,
+                        //         top: Val::Px(50.),
+                        //         left: Val::Px(50.),
+                        //         ..Default::default()
+                        //     },
+                        //     ..Default::default()
+                        // });
+                    }
+                    if room.player3.is_some() {
+                        commands.spawn(TextBundle {
+                            text: Text::from_section(
+                                "player 3",
+                                TextStyle {
+                                    font: assets.font.clone(),
+                                    font_size: 24.0,
+                                    color: Color::GOLD,
+                                    ..Default::default()
+                                },
+                            )
+                            .with_alignment(TextAlignment::Center),
+                            style: Style {
+                                margin: UiRect::all(Val::Px(10.0)),
+                                position_type: PositionType::Absolute,
+                                top: Val::Px(70.),
+                                left: Val::Px(70.),
+                                ..Default::default()
+                            },
+                            ..default()
+                        });
+                    }
                 }
             }
             Event::Test(_) => todo!(),
