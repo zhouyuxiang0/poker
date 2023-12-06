@@ -12,7 +12,7 @@ mod start_menu;
 use bevy_asset_loader::prelude::*;
 use bevy_embedded_assets::EmbeddedAssetPlugin;
 use lobby::LobbyComponent;
-use room::RoomComponent;
+use room::RoomUIComponent;
 use start_menu::StartMenuPlugin;
 
 use common::{AppState, MyAssets};
@@ -41,7 +41,7 @@ fn main() {
         .add_systems(Startup, setup)
         .add_plugins(StartMenuPlugin)
         .add_plugins(LobbyComponent)
-        .add_plugins(RoomComponent)
+        .add_plugins(RoomUIComponent)
         .run();
 }
 fn setup(mut commands: Commands) {
