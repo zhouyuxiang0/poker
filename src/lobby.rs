@@ -81,16 +81,23 @@ pub fn setup_lobby(mut commands: Commands, asset: Res<MyAssets>) {
         .with_children(|parent| {
             parent.spawn(ImageBundle {
                 image: asset.bg_login.clone().into(),
+                style: Style {
+                    width: Val::Percent(100.),
+                    height: Val::Percent(100.),
+                    ..Default::default()
+                },
                 ..default()
             });
             parent.spawn(ImageBundle {
                 image: asset.you_qing_girl.clone().into(),
                 style: Style {
-                    width: Val::Px(390.),
-                    height: Val::Px(370.),
+                    width: Val::Percent(30.),
+                    height: Val::Percent(50.),
+                    // width: Val::P(390.),
+                    // height: Val::Px(370.),
                     position_type: PositionType::Absolute,
-                    top: Val::Px(95.),
-                    left: Val::Px(320.),
+                    top: Val::Percent(14.),
+                    left: Val::Percent(25.),
                     ..default()
                 },
                 ..Default::default()
@@ -98,11 +105,11 @@ pub fn setup_lobby(mut commands: Commands, asset: Res<MyAssets>) {
             parent.spawn(ImageBundle {
                 image: asset.you_qing_boy.clone().into(),
                 style: Style {
-                    width: Val::Px(390.),
-                    height: Val::Px(370.),
+                    width: Val::Percent(30.),
+                    height: Val::Percent(50.),
                     position_type: PositionType::Absolute,
-                    top: Val::Px(95.),
-                    left: Val::Px(825.),
+                    top: Val::Percent(14.),
+                    left: Val::Percent(65.),
                     ..default()
                 },
                 ..Default::default()
@@ -111,11 +118,11 @@ pub fn setup_lobby(mut commands: Commands, asset: Res<MyAssets>) {
                 .spawn(ButtonBundle {
                     image: asset.btn_enter_room.clone().into(),
                     style: Style {
-                        width: Val::Px(390.),
-                        height: Val::Px(160.),
+                        width: Val::Percent(32.),
+                        height: Val::Percent(23.),
                         position_type: PositionType::Absolute,
-                        top: Val::Px(395.),
-                        left: Val::Px(315.),
+                        top: Val::Percent(57.),
+                        left: Val::Percent(24.),
                         ..Default::default()
                     },
                     ..Default::default()
@@ -125,11 +132,11 @@ pub fn setup_lobby(mut commands: Commands, asset: Res<MyAssets>) {
                 .spawn(ButtonBundle {
                     image: asset.btn_create_room.clone().into(),
                     style: Style {
-                        width: Val::Px(390.),
-                        height: Val::Px(160.),
+                        width: Val::Percent(32.),
+                        height: Val::Percent(23.),
                         position_type: PositionType::Absolute,
-                        top: Val::Px(395.),
-                        left: Val::Px(820.),
+                        top: Val::Percent(57.),
+                        left: Val::Percent(63.),
                         ..Default::default()
                     },
                     ..Default::default()
@@ -139,13 +146,8 @@ pub fn setup_lobby(mut commands: Commands, asset: Res<MyAssets>) {
                 image: asset.tip.clone().into(),
                 style: Style {
                     position_type: PositionType::Absolute,
-                    top: Val::Px(220.),
-                    left: Val::Px(-60.),
-                    ..Default::default()
-                },
-                transform: Transform {
-                    rotation: Quat::from_rotation_z(-1.57),
-                    // rotation: Quat::from_array([20., 0., 0., 0.]),
+                    top: Val::Percent(23.),
+                    left: Val::Percent(3.),
                     ..Default::default()
                 },
                 ..Default::default()

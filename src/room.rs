@@ -145,6 +145,21 @@ pub fn setup_room(
         });
 }
 
+pub fn update_room(
+    mut commands: Commands,
+    mut query: Query<(Entity, &RoomComponent)>,
+    room: ResMut<Room>,
+    assets: Res<MyAssets>,
+) {
+    // for (e, room_component) in query.iter_mut() {
+    //     if let Some(builder) = commands.get_entity(e) {
+    //         if room.player2.is_some() {
+    //         }
+    //         // commands.get_entity(e).unwrap().add_child(child)
+    //     }
+    // }
+}
+
 pub fn publish_room(_lobby: ResMut<Lobby>, room: ResMut<Room>, mut socket: ResMut<Socket>) {
     let peers = socket
         .unreliable_connected_peers()
@@ -164,7 +179,6 @@ pub fn receive_events(
     _lobby: ResMut<Lobby>,
     mut room: ResMut<Room>,
     mut socket: ResMut<Socket>,
-    query: Query<Entity, With<RoomComponent>>,
     assets: Res<MyAssets>,
 ) {
     let binding = socket.receive_unreliable();
@@ -184,63 +198,6 @@ pub fn receive_events(
                         },
                         vec![*src],
                     );
-                    if room.player2.is_some() {
-                        // commands.spawn(TextBundle {
-                        //     text: Text::from_section(
-                        //         "player 2",
-                        //         TextStyle {
-                        //             font: assets.font.clone(),
-                        //             font_size: 24.0,
-                        //             color: Color::GOLD,
-                        //             ..Default::default()
-                        //         },
-                        //     )
-                        //     .with_alignment(TextAlignment::Center),
-                        //     style: Style {
-                        //         margin: UiRect::all(Val::Px(10.0)),
-                        //         position_type: PositionType::Absolute,
-                        //         top: Val::Px(70.),
-                        //         left: Val::Px(70.),
-                        //         ..Default::default()
-                        //     },
-                        //     ..default()
-                        // });
-                        // commands.spawn(ImageBundle {
-                        //     image: assets.room_touxiang.clone().into(),
-                        //     style: Style {
-                        //         // width: Val::Px(70.),
-                        //         // height: Val::Px(50.),
-                        //         margin: UiRect::all(Val::Px(10.0)),
-                        //         position_type: PositionType::Absolute,
-                        //         top: Val::Px(50.),
-                        //         left: Val::Px(50.),
-                        //         ..Default::default()
-                        //     },
-                        //     ..Default::default()
-                        // });
-                    }
-                    if room.player3.is_some() {
-                        commands.spawn(TextBundle {
-                            text: Text::from_section(
-                                "player 3",
-                                TextStyle {
-                                    font: assets.font.clone(),
-                                    font_size: 24.0,
-                                    color: Color::GOLD,
-                                    ..Default::default()
-                                },
-                            )
-                            .with_alignment(TextAlignment::Center),
-                            style: Style {
-                                margin: UiRect::all(Val::Px(10.0)),
-                                position_type: PositionType::Absolute,
-                                top: Val::Px(70.),
-                                left: Val::Px(70.),
-                                ..Default::default()
-                            },
-                            ..default()
-                        });
-                    }
                 }
             }
             Event::Test(_) => todo!(),
