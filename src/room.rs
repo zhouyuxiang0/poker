@@ -1,4 +1,4 @@
-use bevy::{prelude::*, utils::HashMap};
+use bevy::prelude::*;
 use bevy_matchbox::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -9,13 +9,7 @@ use crate::{
 
 type Config = bevy_ggrs::GgrsConfig<u8, PeerId>;
 
-#[derive(Debug, Serialize, Deserialize, Copy, Clone, PartialEq, Eq, Hash)]
-struct CollabId(u16);
-struct Peer {
-    chalk: Entity,
-    cursor: Entity,
-}
-struct Peers(HashMap<CollabId, Peer>);
+// 客户端房间资源
 #[derive(Resource, Serialize, Deserialize, Clone, Copy, Debug)]
 pub struct Room {
     pub id: PeerId,
@@ -35,7 +29,20 @@ impl Room {
 }
 
 #[derive(Component)]
-pub struct RoomComponent;
+pub struct RoomUIComponent;
+
+#[derive(Component)]
+pub struct RoomComponent {
+    pub id: PeerId,
+    pub player1: PlayerComponent,
+    pub player2: PlayerComponent,
+    pub player3: PlayerComponent,
+}
+
+#[derive(Component)]
+pub struct PlayerComponent {
+    pub peer: PeerId,
+}
 
 impl Room {
     pub fn new(peer: PeerId) -> Self {
@@ -59,14 +66,14 @@ impl Eq for Room {}
 #[derive(Resource)]
 pub struct Rooms(Vec<Room>);
 
-impl Plugin for RoomComponent {
+impl Plugin for RoomUIComponent {
     fn build(&self, app: &mut App) {
         app.add_systems(OnEnter(AppState::InRoom), setup_room)
             .add_systems(
                 Update,
                 (publish_room, receive_events).run_if(in_state(AppState::InRoom)),
             )
-            .add_systems(OnExit(AppState::InRoom), despawn_screen::<RoomComponent>);
+            .add_systems(OnExit(AppState::InRoom), despawn_screen::<RoomUIComponent>);
     }
 }
 
@@ -88,7 +95,7 @@ pub fn setup_room(
                 },
                 ..Default::default()
             },
-            RoomComponent,
+            RoomUIComponent,
         ))
         .with_children(|parent| {
             parent.spawn(ImageBundle {
