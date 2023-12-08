@@ -25,7 +25,7 @@ fn main() {
         .add_plugins((DefaultPlugins
             .set(WindowPlugin {
                 primary_window: Some(Window {
-                    title: "poker".into(),
+                    title: "斗地主".into(),
                     fit_canvas_to_parent: true,
                     resizable: false,
                     ..Default::default()

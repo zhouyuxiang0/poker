@@ -205,6 +205,21 @@ pub fn receive_events(
                         },
                         vec![*src],
                     );
+                    commands
+                        .spawn(ImageBundle {
+                            image: assets.room_touxiang.clone().into(),
+                            style: Style {
+                                // width: Val::Px(70.),
+                                // height: Val::Px(50.),
+                                margin: UiRect::all(Val::Px(10.0)),
+                                position_type: PositionType::Absolute,
+                                top: Val::Px(20.),
+                                left: Val::Px(50.),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        })
+                        .insert(PlayerComponent { peer: *src });
                 }
             }
             Event::Test(_) => todo!(),
