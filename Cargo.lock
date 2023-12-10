@@ -3765,6 +3765,7 @@ dependencies = [
  "bevy_matchbox",
  "ciborium",
  "serde",
+ "serde_json",
 ]
 
 [[package]]

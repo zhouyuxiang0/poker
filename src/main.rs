@@ -6,6 +6,7 @@ use bevy::{
 
 mod common;
 mod lobby;
+mod player;
 mod room;
 mod start_menu;
 

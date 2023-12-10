@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use crate::{
     common::{despawn_screen, AppState, MenuButton, MyAssets, Socket},
     lobby::Lobby,
+    player::Player,
 };
 use bevy_matchbox::prelude::*;
 
@@ -24,6 +25,11 @@ impl Plugin for StartMenuPlugin {
 }
 
 pub fn setup_start_menu(mut commands: Commands, assets: Res<MyAssets>) {
+    let room_url = "ws://47.108.130.232:3536/poker";
+    info!("connecting to matchbox server: {room_url}");
+    let socket = MatchboxSocket::new_ggrs(room_url);
+    let socket = Socket::new(socket);
+    commands.insert_resource(socket);
     commands
         .spawn((
             NodeBundle {
@@ -114,19 +120,18 @@ pub fn menu_button_press_system(
     mut commands: Commands,
     query: Query<(&Interaction, &MenuButton), (Changed<Interaction>, With<Button>)>,
     mut state: ResMut<NextState<AppState>>,
+    mut socket: ResMut<Socket>,
 ) {
     for (interaction, button) in query.iter() {
         if *interaction == Interaction::Pressed {
             match button {
                 MenuButton::Traveler => {
-                    let room_url = "ws://47.108.130.232:3536/poker";
-                    info!("connecting to matchbox server: {room_url}");
-                    let socket = MatchboxSocket::new_ggrs(room_url);
-                    let lobby = Lobby::new();
-                    let socket = Socket::new(socket);
-                    commands.insert_resource(lobby);
-                    commands.insert_resource(socket);
-                    state.set(AppState::Lobby);
+                    if let Some(peer) = socket.unreliable_id() {
+                        let lobby = Lobby::new();
+                        commands.insert_resource(lobby);
+                        commands.insert_resource(Player::new(peer));
+                        state.set(AppState::Lobby);
+                    }
                 }
                 MenuButton::Weixin => {
                     // println!("weixin");

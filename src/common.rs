@@ -6,7 +6,7 @@ use bevy_ggrs::*;
 use bevy_matchbox::{matchbox_socket::WebRtcSocket, prelude::*};
 use serde::{Deserialize, Serialize};
 
-use crate::room::Room;
+use crate::{player::Player, room::Room};
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, States, Default, Reflect)]
 pub enum AppState {
@@ -175,7 +175,7 @@ pub enum Event {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct AddressedEvent {
-    pub(crate) src: PeerId,
+    pub(crate) src: Player,
     pub(crate) event: Event,
 }
 
