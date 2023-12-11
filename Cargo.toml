@@ -11,6 +11,7 @@ bevy_asset_loader = { version = "0.18.0", features = ["2d"] }
 bevy_embedded_assets = "0.9.1"
 bevy_ggrs = { version = "0.14.0", features = ["wasm-bindgen"] }
 bevy_matchbox = { version = "0.8.0", features = ["ggrs"] }
+bevy_rapier2d = "0.23.0"
 ciborium = "0.2.1"
 serde = "1.0.0"
 serde_json = "1.0"

@@ -8,6 +8,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::{player::Player, room::Room};
 
+pub enum CardIndex {
+    方片9 = 0,
+    方片8 = 1,
+    方片7 = 3,
+}
+
 #[derive(Debug, Clone, Eq, PartialEq, Hash, States, Default, Reflect)]
 pub enum AppState {
     #[default]
@@ -40,12 +46,12 @@ pub struct MyAssets {
     pub woman_jiao_di_zhu: Handle<AudioSource>,
 
     #[asset(texture_atlas(
-        tile_size_x = 64.,
-        tile_size_y = 64.,
+        tile_size_x = 116.,
+        tile_size_y = 159.,
         columns = 13,
         rows = 5,
-        padding_x = 0.,
-        padding_y = 0.,
+        padding_x = 2.,
+        padding_y = 2.,
         offset_x = 0.,
         offset_y = 0.
     ))]

@@ -1,10 +1,10 @@
-use bevy::prelude::*;
+use bevy::{audio::PlaybackMode, prelude::*, transform};
 use bevy_matchbox::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     common::{despawn_screen, AddressedEvent, AppState, Event, MyAssets, Socket},
-    lobby::Lobby,
+    lobby::{Lobby, LobbyComponent},
     player::{self, Player},
 };
 
@@ -80,18 +80,28 @@ impl Plugin for RoomUIComponent {
     }
 }
 
-fn init_card(mut commands: Commands, assets: Res<MyAssets>) {
-    commands.spawn((
-        SpriteSheetBundle {
+fn init_card(
+    mut commands: Commands,
+    assets: Res<MyAssets>,
+    mut q: Query<&Transform, With<RoomUIComponent>>,
+) {
+    println!("------------");
+    for transform in &mut q {
+        println!("{:?}", transform);
+        commands.spawn(SpriteSheetBundle {
             sprite: TextureAtlasSprite {
-                index: 1,
+                index: 51,
+                ..Default::default()
+            },
+            transform: Transform {
+                translation: Vec3::new(0., 0., 1.),
+                scale: Vec3::new(0.65, 0.65, 0.65),
                 ..Default::default()
             },
             texture_atlas: assets.card.clone(),
             ..Default::default()
-        },
-        Card,
-    ));
+        });
+    }
 }
 
 pub fn setup_room(mut commands: Commands, assets: Res<MyAssets>) {
@@ -105,6 +115,7 @@ pub fn setup_room(mut commands: Commands, assets: Res<MyAssets>) {
                     justify_content: JustifyContent::Center,
                     ..default()
                 },
+                transform: Transform::from_xyz(0., 0., 0.),
                 ..Default::default()
             },
             RoomUIComponent,
@@ -116,6 +127,7 @@ pub fn setup_room(mut commands: Commands, assets: Res<MyAssets>) {
                     width: Val::Percent(100.),
                     ..Default::default()
                 },
+                transform: Transform::from_xyz(0., 0., 0.),
                 ..default()
             });
         });
