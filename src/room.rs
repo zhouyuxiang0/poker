@@ -75,7 +75,7 @@ impl Plugin for RoomUIComponent {
                 Update,
                 (setup_player, publish_room, receive_events).run_if(in_state(AppState::InRoom)),
             )
-            .add_systems(OnEnter(AppState::Playing), init_card);
+            .add_systems(OnEnter(AppState::Lobby), init_card);
         // .add_systems(OnExit(AppState::Playing), despawn_screen::<RoomUIComponent>);
     }
 }
@@ -83,7 +83,7 @@ impl Plugin for RoomUIComponent {
 fn init_card(
     mut commands: Commands,
     assets: Res<MyAssets>,
-    mut q: Query<&Transform, With<RoomUIComponent>>,
+    mut q: Query<&Transform, With<LobbyComponent>>,
 ) {
     println!("------------");
     for transform in &mut q {
