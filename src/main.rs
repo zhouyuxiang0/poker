@@ -1,10 +1,9 @@
 // #![windows_subsystem = "windows"]
 use bevy::{
     prelude::*,
-    window::{WindowMode, WindowResolution},
+    window::{EnabledButtons, WindowMode, WindowResolution},
 };
 
-mod background;
 mod common;
 mod lobby;
 mod player;
@@ -31,6 +30,10 @@ fn main() {
                     title: "斗地主".into(),
                     fit_canvas_to_parent: true,
                     resizable: false,
+                    enabled_buttons: EnabledButtons {
+                        maximize: false,
+                        ..Default::default()
+                    },
                     ..Default::default()
                 }),
                 ..Default::default()

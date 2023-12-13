@@ -1,12 +1,12 @@
-use bevy::{audio::PlaybackMode, prelude::*, transform};
-use bevy_matchbox::prelude::*;
-use serde::{Deserialize, Serialize};
-
 use crate::{
-    common::{despawn_screen, AddressedEvent, AppState, Event, MyAssets, Socket},
+    common::{despawn_screen, AddressedEvent, AppState, CardIndex, Event, MyAssets, Socket},
     lobby::{Lobby, LobbyComponent},
     player::{self, Player},
 };
+use bevy::{audio::PlaybackMode, prelude::*, transform};
+use bevy_matchbox::prelude::*;
+use rand::seq::SliceRandom;
+use serde::{Deserialize, Serialize};
 
 type Config = bevy_ggrs::GgrsConfig<u8, PeerId>;
 
@@ -80,17 +80,10 @@ impl Plugin for RoomUIComponent {
     }
 }
 
-fn init_card(
-    mut commands: Commands,
-    assets: Res<MyAssets>,
-    mut q: Query<&Transform, With<RoomUIComponent>>,
-) {
-    for t in &mut q {
-        println!("{:?}", t);
-    }
+fn init_card(mut commands: Commands, assets: Res<MyAssets>) {
     commands.spawn((SpriteSheetBundle {
         sprite: TextureAtlasSprite {
-            index: 51,
+            index: 4,
             ..Default::default()
         },
         transform: Transform {
@@ -101,22 +94,77 @@ fn init_card(
         texture_atlas: assets.card.clone(),
         ..Default::default()
     },));
+    let mut cards: [CardIndex; 54] = [
+        CardIndex::方片9,
+        CardIndex::方片8,
+        CardIndex::方片7,
+        CardIndex::方片6,
+        CardIndex::小王,
+        CardIndex::大王,
+        CardIndex::黑桃K,
+        CardIndex::黑桃Q,
+        CardIndex::黑桃J,
+        CardIndex::方片5,
+        CardIndex::黑桃10,
+        CardIndex::黑桃9,
+        CardIndex::黑桃8,
+        CardIndex::黑桃7,
+        CardIndex::黑桃6,
+        CardIndex::黑桃5,
+        CardIndex::黑桃4,
+        CardIndex::黑桃3,
+        CardIndex::黑桃2,
+        CardIndex::黑桃A,
+        CardIndex::方片4,
+        CardIndex::红桃K,
+        CardIndex::红桃Q,
+        CardIndex::红桃J,
+        CardIndex::红桃10,
+        CardIndex::红桃9,
+        CardIndex::红桃8,
+        CardIndex::红桃7,
+        CardIndex::红桃6,
+        CardIndex::红桃5,
+        CardIndex::红桃4,
+        CardIndex::方片3,
+        CardIndex::红桃3,
+        CardIndex::红桃2,
+        CardIndex::红桃A,
+        CardIndex::梅花K,
+        CardIndex::梅花Q,
+        CardIndex::梅花J,
+        CardIndex::梅花10,
+        CardIndex::梅花9,
+        CardIndex::梅花8,
+        CardIndex::梅花7,
+        CardIndex::方片2,
+        CardIndex::梅花6,
+        CardIndex::梅花5,
+        CardIndex::梅花4,
+        CardIndex::梅花3,
+        CardIndex::梅花2,
+        CardIndex::梅花A,
+        CardIndex::方片K,
+        CardIndex::方片Q,
+        CardIndex::方片J,
+        CardIndex::方片10,
+        CardIndex::方片A,
+    ];
+    cards.shuffle(&mut rand::thread_rng());
+    for card in cards {
+        //
+    }
 }
 
 pub fn setup_room(mut commands: Commands, assets: Res<MyAssets>) {
     commands.spawn((
-        ImageBundle {
-            // texture: assets.table_bg_1.clone(),
-            image: assets.table_bg_1.clone().into(),
-            style: Style {
-                width: Val::Percent(100.),
-                ..Default::default()
-            },
+        SpriteBundle {
+            texture: assets.table_bg_1.clone(),
             transform: Transform {
-                translation: Vec3::new(0., 0., 0.),
+                scale: Vec3::new(1.2, 1., 1.),
                 ..Default::default()
             },
-            ..default()
+            ..Default::default()
         },
         RoomUIComponent,
     ));

@@ -3916,6 +3916,7 @@ dependencies = [
  "bevy_matchbox",
  "bevy_rapier2d",
  "ciborium",
+ "rand",
  "serde",
  "serde_json",
 ]
