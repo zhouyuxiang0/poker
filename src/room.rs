@@ -75,7 +75,7 @@ impl Plugin for RoomUIComponent {
                 Update,
                 (setup_player, publish_room, receive_events).run_if(in_state(AppState::InRoom)),
             )
-            .add_systems(OnEnter(AppState::Lobby), init_card);
+            .add_systems(OnEnter(AppState::InRoom), init_card);
         // .add_systems(OnExit(AppState::Playing), despawn_screen::<RoomUIComponent>);
     }
 }
@@ -83,54 +83,43 @@ impl Plugin for RoomUIComponent {
 fn init_card(
     mut commands: Commands,
     assets: Res<MyAssets>,
-    mut q: Query<&Transform, With<LobbyComponent>>,
+    mut q: Query<&Transform, With<RoomUIComponent>>,
 ) {
-    println!("------------");
-    for transform in &mut q {
-        println!("{:?}", transform);
-        commands.spawn(SpriteSheetBundle {
-            sprite: TextureAtlasSprite {
-                index: 51,
-                ..Default::default()
-            },
-            transform: Transform {
-                translation: Vec3::new(0., 0., 1.),
-                scale: Vec3::new(0.65, 0.65, 0.65),
-                ..Default::default()
-            },
-            texture_atlas: assets.card.clone(),
-            ..Default::default()
-        });
+    for t in &mut q {
+        println!("{:?}", t);
     }
+    commands.spawn((SpriteSheetBundle {
+        sprite: TextureAtlasSprite {
+            index: 51,
+            ..Default::default()
+        },
+        transform: Transform {
+            translation: Vec3::new(0., 0., 1.),
+            scale: Vec3::new(0.65, 0.65, 0.65),
+            ..Default::default()
+        },
+        texture_atlas: assets.card.clone(),
+        ..Default::default()
+    },));
 }
 
 pub fn setup_room(mut commands: Commands, assets: Res<MyAssets>) {
-    commands
-        .spawn((
-            NodeBundle {
-                style: Style {
-                    width: Val::Percent(100.),
-                    height: Val::Percent(100.),
-                    align_items: AlignItems::Center,
-                    justify_content: JustifyContent::Center,
-                    ..default()
-                },
-                transform: Transform::from_xyz(0., 0., 0.),
+    commands.spawn((
+        ImageBundle {
+            // texture: assets.table_bg_1.clone(),
+            image: assets.table_bg_1.clone().into(),
+            style: Style {
+                width: Val::Percent(100.),
                 ..Default::default()
             },
-            RoomUIComponent,
-        ))
-        .with_children(|parent| {
-            parent.spawn(ImageBundle {
-                image: assets.table_bg_1.clone().into(),
-                style: Style {
-                    width: Val::Percent(100.),
-                    ..Default::default()
-                },
-                transform: Transform::from_xyz(0., 0., 0.),
-                ..default()
-            });
-        });
+            transform: Transform {
+                translation: Vec3::new(0., 0., 0.),
+                ..Default::default()
+            },
+            ..default()
+        },
+        RoomUIComponent,
+    ));
 }
 
 fn setup_player(

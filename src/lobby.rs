@@ -69,13 +69,13 @@ pub fn setup_lobby(mut commands: Commands, asset: Res<MyAssets>) {
             LobbyComponent,
         ))
         .with_children(|parent| {
-            parent.spawn(SpriteBundle {
-                texture: asset.bg_login.clone().into(),
-                // style: Style {
-                //     width: Val::Percent(100.),
-                //     height: Val::Percent(100.),
-                //     ..Default::default()
-                // },
+            parent.spawn(ImageBundle {
+                image: asset.bg_login.clone().into(),
+                style: Style {
+                    width: Val::Percent(100.),
+                    height: Val::Percent(100.),
+                    ..Default::default()
+                },
                 ..default()
             });
             parent.spawn(ImageBundle {

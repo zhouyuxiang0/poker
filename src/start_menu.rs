@@ -47,13 +47,13 @@ pub fn setup_start_menu(mut commands: Commands, assets: Res<MyAssets>) {
             builder
                 .spawn((
                     StartMenuPlugin,
-                    SpriteBundle {
-                        texture: assets.loading_bg.clone(),
-                        // style: Style {
-                        //     width: Val::Percent(100.),
-                        //     height: Val::Percent(100.),
-                        //     ..Default::default()
-                        // },
+                    ImageBundle {
+                        image: assets.loading_bg.clone().into(),
+                        style: Style {
+                            width: Val::Percent(100.),
+                            height: Val::Percent(100.),
+                            ..Default::default()
+                        },
                         ..default()
                     },
                 ))
