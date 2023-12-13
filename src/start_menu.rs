@@ -45,18 +45,15 @@ pub fn setup_start_menu(mut commands: Commands, assets: Res<MyAssets>) {
         ))
         .with_children(|builder| {
             builder
-                .spawn((
-                    StartMenuPlugin,
-                    ImageBundle {
-                        image: assets.loading_bg.clone().into(),
-                        style: Style {
-                            width: Val::Percent(100.),
-                            height: Val::Percent(100.),
-                            ..Default::default()
-                        },
-                        ..default()
+                .spawn(ImageBundle {
+                    image: assets.loading_bg.clone().into(),
+                    style: Style {
+                        width: Val::Percent(100.),
+                        height: Val::Percent(100.),
+                        ..Default::default()
                     },
-                ))
+                    ..default()
+                })
                 .with_children(|builder| {
                     builder
                         .spawn(ButtonBundle {

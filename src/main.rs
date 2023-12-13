@@ -4,6 +4,7 @@ use bevy::{
     window::{WindowMode, WindowResolution},
 };
 
+mod background;
 mod common;
 mod lobby;
 mod player;
