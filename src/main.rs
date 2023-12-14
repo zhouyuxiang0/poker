@@ -9,6 +9,7 @@ mod lobby;
 mod player;
 mod room;
 mod start_menu;
+mod card;
 
 use bevy_asset_loader::prelude::*;
 use bevy_embedded_assets::EmbeddedAssetPlugin;
