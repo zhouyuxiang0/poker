@@ -9,7 +9,7 @@ pub struct Card {
 }
 
 impl Card {
-    fn new(card_index: Option<CardIndex>, hidden: bool) -> Self {
+    pub fn new(card_index: Option<CardIndex>, hidden: bool) -> Self {
         Self { card_index, hidden }
     }
 }

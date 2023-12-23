@@ -1,4 +1,5 @@
 use crate::{
+    card::Card,
     common::{despawn_screen, AddressedEvent, AppState, CardIndex, Event, MyAssets, Socket},
     lobby::{Lobby, LobbyComponent},
     player::{self, Player},
@@ -24,7 +25,7 @@ pub struct Room {
 pub struct RoomUIComponent;
 
 #[derive(Component)]
-pub struct Card;
+pub struct DealCardTimer(pub Timer);
 
 #[derive(Component)]
 pub struct RoomComponent {
@@ -75,26 +76,13 @@ impl Plugin for RoomUIComponent {
                 Update,
                 (setup_player, publish_room, receive_events).run_if(in_state(AppState::InRoom)),
             )
-            .add_systems(OnEnter(AppState::InRoom), init_card);
+            .add_systems(OnEnter(AppState::InRoom), (init_card, deal_card));
         // .add_systems(OnExit(AppState::Playing), despawn_screen::<RoomUIComponent>);
     }
 }
 
 fn init_card(mut commands: Commands, assets: Res<MyAssets>) {
-    commands.spawn((SpriteSheetBundle {
-        sprite: TextureAtlasSprite {
-            index: 4,
-            ..Default::default()
-        },
-        transform: Transform {
-            translation: Vec3::new(0., 0., 1.),
-            scale: Vec3::new(0.65, 0.65, 0.65),
-            ..Default::default()
-        },
-        texture_atlas: assets.card.clone(),
-        ..Default::default()
-    },));
-    let mut cards: [CardIndex; 54] = [
+    let mut cards_index: [CardIndex; 54] = [
         CardIndex::方片9,
         CardIndex::方片8,
         CardIndex::方片7,
@@ -150,10 +138,30 @@ fn init_card(mut commands: Commands, assets: Res<MyAssets>) {
         CardIndex::方片10,
         CardIndex::方片A,
     ];
-    cards.shuffle(&mut rand::thread_rng());
-    for card in cards {
-        //
+    cards_index.shuffle(&mut rand::thread_rng());
+    for index in cards_index {
+        commands.spawn((
+            SpriteSheetBundle {
+                sprite: TextureAtlasSprite {
+                    index: 4,
+                    ..Default::default()
+                },
+                transform: Transform {
+                    translation: Vec3::new(0., 0., 1.),
+                    scale: Vec3::new(0.65, 0.65, 0.65),
+                    ..Default::default()
+                },
+                texture_atlas: assets.card.clone(),
+                ..Default::default()
+            },
+            Card::new(Some(index), true),
+            DealCardTimer(Timer::from_seconds(1.0, TimerMode::Once)),
+        ));
     }
+}
+
+fn deal_card() {
+    // 发牌动画
 }
 
 pub fn setup_room(mut commands: Commands, assets: Res<MyAssets>) {
