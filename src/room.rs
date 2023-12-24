@@ -82,6 +82,7 @@ impl Plugin for RoomUIComponent {
 }
 
 fn init_card(mut commands: Commands, assets: Res<MyAssets>) {
+    // 房主随机牌序后 同步牌序 同步成功后开始发牌 发牌动画
     let mut cards_index: [CardIndex; 54] = [
         CardIndex::方片9,
         CardIndex::方片8,
