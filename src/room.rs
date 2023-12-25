@@ -13,6 +13,13 @@ type Config = bevy_ggrs::GgrsConfig<u8, PeerId>;
 
 const PLAYER_POSITION: [[f32; 2]; 3] = [[85., 5.], [20., 5.], [20., 85.]];
 
+#[derive(Component)]
+enum DealCardDirection {
+    Left,
+    Right,
+    Down,
+}
+
 // 客户端房间资源
 #[derive(Resource, Serialize, Deserialize, Clone, Debug)]
 pub struct Room {
@@ -76,12 +83,12 @@ impl Plugin for RoomUIComponent {
                 Update,
                 (setup_player, publish_room, receive_events).run_if(in_state(AppState::InRoom)),
             )
-            .add_systems(OnEnter(AppState::InRoom), (init_card, deal_card));
+            .add_systems(OnEnter(AppState::Playing), (init_card, deal_card));
         // .add_systems(OnExit(AppState::Playing), despawn_screen::<RoomUIComponent>);
     }
 }
 
-fn init_card(mut commands: Commands, assets: Res<MyAssets>) {
+fn init_card(mut commands: Commands, assets: Res<MyAssets>, room: Res<Room>) {
     let mut cards_index: [CardIndex; 54] = [
         CardIndex::方片9,
         CardIndex::方片8,
@@ -139,7 +146,9 @@ fn init_card(mut commands: Commands, assets: Res<MyAssets>) {
         CardIndex::方片A,
     ];
     cards_index.shuffle(&mut rand::thread_rng());
+    let mut i = 0;
     for index in cards_index {
+        let play = room.players[i % 3].unwrap();
         commands.spawn((
             SpriteSheetBundle {
                 sprite: TextureAtlasSprite {
@@ -157,11 +166,14 @@ fn init_card(mut commands: Commands, assets: Res<MyAssets>) {
             Card::new(Some(index), true),
             DealCardTimer(Timer::from_seconds(1.0, TimerMode::Once)),
         ));
+        i = i + 1;
     }
 }
 
-fn deal_card() {
-    // 发牌动画
+fn deal_card(mut q_card: Query<(&mut Transform, &Player), With<Card>>) {
+    for (mut transfrom, player) in &mut q_card {
+        println!("{:?}", player);
+    }
 }
 
 pub fn setup_room(mut commands: Commands, assets: Res<MyAssets>) {

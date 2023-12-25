@@ -72,6 +72,7 @@ pub enum AppState {
     StartMenu,
     Lobby,
     InRoom,
+    DealCard,
     Playing,
     Paused,
     GameOver,
