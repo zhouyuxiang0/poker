@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{player::Player, room::Room};
 
+#[derive(Debug)]
 pub enum CardIndex {
     方片9 = 0,
     方片8,
@@ -72,6 +73,7 @@ pub enum AppState {
     StartMenu,
     Lobby,
     InRoom,
+    DealCard,
     Playing,
     Paused,
     GameOver,

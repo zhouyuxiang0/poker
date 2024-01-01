@@ -15,7 +15,7 @@ impl Default for PlayerState {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, Resource)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Resource, Component)]
 pub struct Player {
     pub id: PeerId,
     pub state: PlayerState,

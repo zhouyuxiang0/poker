@@ -13,6 +13,13 @@ type Config = bevy_ggrs::GgrsConfig<u8, PeerId>;
 
 const PLAYER_POSITION: [[f32; 2]; 3] = [[85., 5.], [20., 5.], [20., 85.]];
 
+#[derive(Component)]
+enum DealCardDirection {
+    Left,
+    Right,
+    Down,
+}
+
 // 客户端房间资源
 #[derive(Resource, Serialize, Deserialize, Clone, Debug)]
 pub struct Room {
@@ -76,13 +83,18 @@ impl Plugin for RoomUIComponent {
                 Update,
                 (setup_player, publish_room, receive_events).run_if(in_state(AppState::InRoom)),
             )
-            .add_systems(OnEnter(AppState::InRoom), (init_card, deal_card));
+            .add_systems(OnEnter(AppState::InRoom), (init_card))
+            .add_systems(Update, deal_card.run_if(in_state(AppState::DealCard)));
         // .add_systems(OnExit(AppState::Playing), despawn_screen::<RoomUIComponent>);
     }
 }
 
-fn init_card(mut commands: Commands, assets: Res<MyAssets>) {
-    // 房主随机牌序后 同步牌序 同步成功后开始发牌 发牌动画
+fn init_card(
+    mut commands: Commands,
+    assets: Res<MyAssets>,
+    room: Res<Room>,
+    mut state: ResMut<NextState<AppState>>,
+) {
     let mut cards_index: [CardIndex; 54] = [
         CardIndex::方片9,
         CardIndex::方片8,
@@ -140,29 +152,41 @@ fn init_card(mut commands: Commands, assets: Res<MyAssets>) {
         CardIndex::方片A,
     ];
     cards_index.shuffle(&mut rand::thread_rng());
+    let mut i = 0;
     for index in cards_index {
-        commands.spawn((
-            SpriteSheetBundle {
-                sprite: TextureAtlasSprite {
-                    index: 4,
+        if let Some(play) = room.players[i % 3] {
+            commands.spawn((
+                SpriteSheetBundle {
+                    sprite: TextureAtlasSprite {
+                        index: 4,
+                        ..Default::default()
+                    },
+                    transform: Transform {
+                        translation: Vec3::new(0., 0., 1.),
+                        scale: Vec3::new(0.65, 0.65, 0.65),
+                        ..Default::default()
+                    },
+                    texture_atlas: assets.card.clone(),
                     ..Default::default()
                 },
-                transform: Transform {
-                    translation: Vec3::new(0., 0., 1.),
-                    scale: Vec3::new(0.65, 0.65, 0.65),
-                    ..Default::default()
-                },
-                texture_atlas: assets.card.clone(),
-                ..Default::default()
-            },
-            Card::new(Some(index), true),
-            DealCardTimer(Timer::from_seconds(1.0, TimerMode::Once)),
-        ));
+                Card::new(Some(index), true),
+                DealCardTimer(Timer::from_seconds(1.0, TimerMode::Once)),
+                play,
+            ));
+        }
+        i = i + 1;
     }
+    state.set(AppState::DealCard);
 }
 
-fn deal_card() {
-    // 发牌动画
+fn deal_card(mut q_card: Query<(&mut Transform, &Card), With<Player>>, time: Res<Time>) {
+    let mut index = 1.;
+    for (mut transfrom, card) in &mut q_card {
+        transfrom.translation.x = transfrom.translation.x + 80. * time.delta_seconds();
+        transfrom.translation.y = transfrom.translation.y - 80. * time.delta_seconds();
+        index = index + 1.;
+        println!("{:?}", card);
+    }
 }
 
 pub fn setup_room(mut commands: Commands, assets: Res<MyAssets>) {

@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::common::CardIndex;
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct Card {
     pub card_index: Option<CardIndex>,
     pub hidden: bool,
