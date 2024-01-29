@@ -2,6 +2,8 @@ use bevy::prelude::*;
 use bevy_matchbox::prelude::*;
 use serde::{Deserialize, Serialize};
 
+use crate::card::Card;
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum PlayerState {
     LobbyFree,
@@ -15,12 +17,13 @@ impl Default for PlayerState {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, Resource, Component)]
+#[derive(Debug, Clone, Serialize, Deserialize, Resource, Component)]
 pub struct Player {
     pub id: PeerId,
     pub state: PlayerState,
     pub room_index: Option<i32>,
     pub current_round: bool,
+    pub hand: Vec<Card>,
 }
 
 impl PartialEq for Player {
@@ -38,6 +41,7 @@ impl Player {
             room_index: None,
             current_round: false,
             state: PlayerState::default(),
+            hand: Vec::with_capacity(51 / 3),
         }
     }
 }

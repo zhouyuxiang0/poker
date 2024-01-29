@@ -1,5 +1,5 @@
 use crate::{
-    card::Card,
+    card::{new_deck, Card},
     common::{despawn_screen, AddressedEvent, AppState, CardIndex, Event, MyAssets, Socket},
     lobby::{Lobby, LobbyComponent},
     player::{self, Player},
@@ -12,7 +12,9 @@ use serde::{Deserialize, Serialize};
 type Config = bevy_ggrs::GgrsConfig<u8, PeerId>;
 
 const PLAYER_POSITION: [[f32; 2]; 3] = [[85., 5.], [20., 5.], [20., 85.]];
-
+const BOTTOM_CARD_POSITION: [[f32; 2]; 1] = [[20., 20.]];
+const LEFT_CARD_POSITION: [[f32; 2]; 1] = [[0., 0.]];
+const RIGHT_CARD_POSITION: [[f32; 2]; 1] = [[0., 0.]];
 #[derive(Component)]
 enum DealCardDirection {
     Left,
@@ -31,8 +33,8 @@ pub struct Room {
 #[derive(Component)]
 pub struct RoomUIComponent;
 
-#[derive(Component)]
-pub struct DealCardTimer(pub Timer);
+// #[derive(Component)]
+// pub struct DealCardTimer(pub Timer);
 
 #[derive(Component)]
 pub struct RoomComponent {
@@ -45,11 +47,14 @@ pub struct PlayerComponent {
     pub peer: PeerId,
 }
 
+#[derive(Component)]
+pub struct PorkIndex(pub usize);
+
 impl Room {
     pub fn new(player: Player) -> Self {
         Self {
-            players: [Some(player), None, None],
-            owner: player,
+            players: [Some(player.clone()), None, None],
+            owner: player.clone(),
         }
     }
 
@@ -95,98 +100,38 @@ fn init_card(
     room: Res<Room>,
     mut state: ResMut<NextState<AppState>>,
 ) {
-    let mut cards_index: [CardIndex; 54] = [
-        CardIndex::方片9,
-        CardIndex::方片8,
-        CardIndex::方片7,
-        CardIndex::方片6,
-        CardIndex::小王,
-        CardIndex::大王,
-        CardIndex::黑桃K,
-        CardIndex::黑桃Q,
-        CardIndex::黑桃J,
-        CardIndex::方片5,
-        CardIndex::黑桃10,
-        CardIndex::黑桃9,
-        CardIndex::黑桃8,
-        CardIndex::黑桃7,
-        CardIndex::黑桃6,
-        CardIndex::黑桃5,
-        CardIndex::黑桃4,
-        CardIndex::黑桃3,
-        CardIndex::黑桃2,
-        CardIndex::黑桃A,
-        CardIndex::方片4,
-        CardIndex::红桃K,
-        CardIndex::红桃Q,
-        CardIndex::红桃J,
-        CardIndex::红桃10,
-        CardIndex::红桃9,
-        CardIndex::红桃8,
-        CardIndex::红桃7,
-        CardIndex::红桃6,
-        CardIndex::红桃5,
-        CardIndex::红桃4,
-        CardIndex::方片3,
-        CardIndex::红桃3,
-        CardIndex::红桃2,
-        CardIndex::红桃A,
-        CardIndex::梅花K,
-        CardIndex::梅花Q,
-        CardIndex::梅花J,
-        CardIndex::梅花10,
-        CardIndex::梅花9,
-        CardIndex::梅花8,
-        CardIndex::梅花7,
-        CardIndex::方片2,
-        CardIndex::梅花6,
-        CardIndex::梅花5,
-        CardIndex::梅花4,
-        CardIndex::梅花3,
-        CardIndex::梅花2,
-        CardIndex::梅花A,
-        CardIndex::方片K,
-        CardIndex::方片Q,
-        CardIndex::方片J,
-        CardIndex::方片10,
-        CardIndex::方片A,
-    ];
-    cards_index.shuffle(&mut rand::thread_rng());
-    let mut i = 0;
-    for index in cards_index {
-        if let Some(play) = room.players[i % 3] {
-            commands.spawn((
-                SpriteSheetBundle {
-                    sprite: TextureAtlasSprite {
-                        index: 4,
-                        ..Default::default()
-                    },
-                    transform: Transform {
-                        translation: Vec3::new(0., 0., 1.),
-                        scale: Vec3::new(0.65, 0.65, 0.65),
-                        ..Default::default()
-                    },
-                    texture_atlas: assets.card.clone(),
-                    ..Default::default()
-                },
-                Card::new(Some(index), true),
-                DealCardTimer(Timer::from_seconds(1.0, TimerMode::Once)),
-                play,
-            ));
-        }
-        i = i + 1;
+    let deck = new_deck();
+    for card in deck {
+        let sprite_index = get_sprite_index(&card);
+        commands
+            .spawn(SpriteSheetBundle {
+                texture_atlas: assets.card,
+                transform: Transform::from_xyz(0., 0.0, 0.0),
+                sprite: TextureAtlasSprite::new(sprite_index),
+                ..Default::default()
+            })
+            .insert(card);
     }
-    state.set(AppState::DealCard);
 }
 
-fn deal_card(mut q_card: Query<(&mut Transform, &Card), With<Player>>, time: Res<Time>) {
-    let mut index = 1.;
-    for (mut transfrom, card) in &mut q_card {
-        transfrom.translation.x = transfrom.translation.x + 80. * time.delta_seconds();
-        transfrom.translation.y = transfrom.translation.y - 80. * time.delta_seconds();
-        index = index + 1.;
-        println!("{:?}", card);
-    }
+fn get_sprite_index() {}
+
+fn deal_card(// mut q_card: Query<(&mut Transform, &Card), With<Player>>,
+    // time: Res<Time>,
+    // mut card_deal_timer: Local<f32>,
+) {
+    // println!("{:?}", time.delta_seconds());
+    // *card_deal_timer += time.delta_seconds();
+    // let mut index = 1.;
+    // for (mut transfrom, card) in &mut q_card {
+    //     if *card_deal_timer > 0.1 {
+    //         transfrom.translation.x = transfrom.translation.x + 80. * time.delta_seconds();
+    //         transfrom.translation.y = transfrom.translation.y - 80. * time.delta_seconds();
+    //         index = index + 1.;
+    //         // println!("{:?}", card);
+    //         *card_deal_timer = 0.0;
+    //     }
+    // }
 }
 
 pub fn setup_room(mut commands: Commands, assets: Res<MyAssets>) {
@@ -213,16 +158,28 @@ fn setup_player(
     let local_index = room
         .players
         .iter()
-        .position(|&p| p.is_some() && p.unwrap() == *local);
+        .position(|p| p.is_some() && p.clone().unwrap() == *local);
     if let Some(index) = local_index {
         let sort_players = match index {
-            0 => [room.players[0], room.players[1], room.players[2]],
-            1 => [room.players[1], room.players[2], room.players[0]],
-            2 => [room.players[2], room.players[0], room.players[1]],
+            0 => [
+                room.players[0].clone(),
+                room.players[1].clone(),
+                room.players[2].clone(),
+            ],
+            1 => [
+                room.players[1].clone(),
+                room.players[2].clone(),
+                room.players[0].clone(),
+            ],
+            2 => [
+                room.players[2].clone(),
+                room.players[0].clone(),
+                room.players[1].clone(),
+            ],
             _ => unreachable!(),
         };
         for index in 0..sort_players.len() {
-            if let Some(player) = sort_players[index] {
+            if let Some(player) = sort_players[index].clone() {
                 commands
                     .spawn(TextBundle {
                         text: Text::from_section(
@@ -276,7 +233,7 @@ pub fn publish_room(
         .to_owned();
     socket.send_unreliable(
         AddressedEvent {
-            src: *local,
+            src: local.clone(),
             event: Event::SyncRoom(room.clone()),
         },
         peers,
@@ -296,18 +253,24 @@ pub fn receive_events(
     for AddressedEvent { src, event } in events {
         match event {
             Event::JoinRoom => {
-                if room.join(*src) {
+                if room.join(src.clone()) {
                     println!("{:?}", room.players);
                     let mut peers = room
                         .players
                         .iter()
-                        .filter(|p| p.is_some() && p.unwrap().id != local.id)
-                        .map(|p| p.unwrap().id)
+                        .filter(|p| {
+                            p.is_some()
+                                && <std::option::Option<Player> as Clone>::clone(&p)
+                                    .unwrap()
+                                    .id
+                                    != local.id
+                        })
+                        .map(|p| p.clone().unwrap().id)
                         .collect::<Vec<PeerId>>();
                     peers.push(src.id);
                     socket.send_unreliable(
                         AddressedEvent {
-                            src: *local,
+                            src: local.clone(),
                             event: Event::JoinRoomSuccess(room.clone()),
                         },
                         peers,

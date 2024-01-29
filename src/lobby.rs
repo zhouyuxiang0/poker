@@ -166,18 +166,18 @@ pub fn lobby_button_press_system(
                         println!("请求加入房间{:?}", room);
                         socket.send_unreliable(
                             AddressedEvent {
-                                src: *player,
+                                src: player.clone(),
                                 event: Event::JoinRoom,
                             },
                             room.players
                                 .iter()
                                 .filter(|p| p.is_some())
-                                .map(|v| v.unwrap().id)
+                                .map(|v| v.clone().unwrap().id)
                                 .collect::<Vec<PeerId>>(),
                         );
                     } else {
                         // 创建房间 通知其他客户端房间信息
-                        let room = Room::new(*player);
+                        let room = Room::new(player.clone());
                         lobby.add_room(room.clone());
                         commands.insert_resource(room.clone());
                         state.set(AppState::InRoom);
@@ -185,7 +185,7 @@ pub fn lobby_button_press_system(
                 }
                 LobbyButton::CreateRoom => {
                     // 创建房间 通知其他客户端房间信息
-                    let room = Room::new(*player);
+                    let room = Room::new(player.clone());
                     lobby.add_room(room.clone());
                     commands.insert_resource(room.clone());
                     state.set(AppState::InRoom);
@@ -221,7 +221,7 @@ pub fn receive_events(
             }
             Event::JoinRoomSuccess(room) => {
                 commands.insert_resource(room.to_owned());
-                let p = Some(*player);
+                let p = Some(player.clone());
                 if room.players.contains(&p) {
                     state.set(AppState::InRoom);
                 }

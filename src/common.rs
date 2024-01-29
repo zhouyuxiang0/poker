@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{player::Player, room::Room};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum CardIndex {
     方片9 = 0,
     方片8,
