@@ -1,5 +1,5 @@
 use crate::{
-    card::{new_deck, Card},
+    card::{get_sprite_index, new_deck, Card, Rank, Suit},
     common::{despawn_screen, AddressedEvent, AppState, CardIndex, Event, MyAssets, Socket},
     lobby::{Lobby, LobbyComponent},
     player::{self, Player},
@@ -15,15 +15,9 @@ const PLAYER_POSITION: [[f32; 2]; 3] = [[85., 5.], [20., 5.], [20., 85.]];
 const BOTTOM_CARD_POSITION: [[f32; 2]; 1] = [[20., 20.]];
 const LEFT_CARD_POSITION: [[f32; 2]; 1] = [[0., 0.]];
 const RIGHT_CARD_POSITION: [[f32; 2]; 1] = [[0., 0.]];
-#[derive(Component)]
-enum DealCardDirection {
-    Left,
-    Right,
-    Down,
-}
 
 // 客户端房间资源
-#[derive(Resource, Serialize, Deserialize, Clone, Debug)]
+#[derive(Resource, Serialize, Deserialize, Clone, Debug, Component)]
 pub struct Room {
     // pub id: PeerId,
     pub players: [Option<Player>; 3],
@@ -40,6 +34,8 @@ pub struct RoomUIComponent;
 pub struct RoomComponent {
     pub id: PeerId,
     pub players: Vec<Player>,
+    is_full: bool,
+    is_game_ready: bool,
 }
 
 #[derive(Component)]
@@ -105,7 +101,7 @@ fn init_card(
         let sprite_index = get_sprite_index(&card);
         commands
             .spawn(SpriteSheetBundle {
-                texture_atlas: assets.card,
+                texture_atlas: assets.card.to_owned(),
                 transform: Transform::from_xyz(0., 0.0, 0.0),
                 sprite: TextureAtlasSprite::new(sprite_index),
                 ..Default::default()
@@ -114,11 +110,11 @@ fn init_card(
     }
 }
 
-fn get_sprite_index() {}
-
-fn deal_card(// mut q_card: Query<(&mut Transform, &Card), With<Player>>,
-    // time: Res<Time>,
-    // mut card_deal_timer: Local<f32>,
+fn deal_card(
+    mut commands: Commands,
+    // mut deck: Vec<Card>,
+    // card_textures: Res<CardTextureAtlas>,
+    // mut players: ResMut<Vec<Player>>,
 ) {
     // println!("{:?}", time.delta_seconds());
     // *card_deal_timer += time.delta_seconds();

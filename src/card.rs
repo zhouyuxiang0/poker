@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use rand::{seq::SliceRandom, thread_rng};
 
 use crate::common::CardIndex;
 use serde::{Deserialize, Serialize};
@@ -13,6 +14,8 @@ pub enum Suit {
     Heart,
     /**黑桃 */
     Spade,
+    /**王 */
+    Joker,
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -34,15 +37,25 @@ pub enum Rank {
     BigJoker,
 }
 
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Serialize, Deserialize, Component)]
 pub struct Card {
     pub suit: Suit,
     pub rank: Rank,
+    pub is_face_up: bool,
 }
 
 impl Card {
     pub fn new(suit: Suit, rank: Rank) -> Self {
-        Card { suit, rank }
+        Card {
+            suit,
+            rank,
+            is_face_up: false,
+        }
+    }
+
+    // 可以添加一些辅助方法，例如翻转牌
+    pub fn flip(&mut self) {
+        self.is_face_up = !self.is_face_up;
     }
 
     // 可以添加其他与牌相关的功能，如比较大小等
@@ -88,41 +101,46 @@ pub fn new_deck() -> Vec<Card> {
         }
     }
     // 添加大小王
-    deck.push(Card::new(Suit::Spade, Rank::LittleJoker)); // 小王
-    deck.push(Card::new(Suit::Spade, Rank::BigJoker)); // 大王
+    deck.push(Card::new(Suit::Joker, Rank::LittleJoker)); // 小王
+    deck.push(Card::new(Suit::Joker, Rank::BigJoker)); // 大王
+    deck
+}
+
+pub fn shuffle_deck(mut deck: Vec<Card>) -> Vec<Card> {
+    let mut rng = thread_rng();
+    deck.shuffle(&mut rng);
     deck
 }
 
 pub fn get_sprite_index(card: &Card) -> usize {
-    match card.rank {
-        Rank::LittleJoker => 52, // 假设小王在图集中的索引是52
-        Rank::BigJoker => 53,    // 假设大王在图集中的索引是53
-        _ => {
-            // 计算普通牌在图集中的索引
-            let suit_offset = match card.suit {
-                Suit::Club => 0,
-                Suit::Diamond => 13,
-                Suit::Heart => 26,
-                Suit::Spade => 39,
-            };
-            let rank_offset = match card.rank {
-                Rank::Two => 0,
-                Rank::Three => 1,
-                Rank::Ace => 12,
-                Rank::Four => todo!(),
-                Rank::Five => todo!(),
-                Rank::Six => todo!(),
-                Rank::Seven => todo!(),
-                Rank::Eight => todo!(),
-                Rank::Nine => todo!(),
-                Rank::Ten => todo!(),
-                Rank::Jack => todo!(),
-                Rank::Queen => todo!(),
-                Rank::King => todo!(),
-                Rank::LittleJoker => todo!(),
-                Rank::BigJoker => todo!(),
-            };
-            suit_offset + rank_offset
-        }
+    // 计算普通牌在图集中的索引
+    if card.is_face_up {
+        let suit_offset = match card.suit {
+            Suit::Club => 390,
+            Suit::Diamond => 13,
+            Suit::Heart => 0,
+            Suit::Spade => 26,
+            Suit::Joker => 52,
+        };
+        let rank_offset = match card.rank {
+            Rank::Ace => 0,
+            Rank::Two => 1,
+            Rank::Three => 2,
+            Rank::Four => 3,
+            Rank::Five => 4,
+            Rank::Six => 5,
+            Rank::Seven => 6,
+            Rank::Eight => 7,
+            Rank::Nine => 8,
+            Rank::Ten => 9,
+            Rank::Jack => 10,
+            Rank::Queen => 11,
+            Rank::King => 12,
+            Rank::LittleJoker => 1,
+            Rank::BigJoker => 0,
+        };
+        suit_offset + rank_offset
+    } else {
+        54
     }
 }

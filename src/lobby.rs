@@ -188,6 +188,7 @@ pub fn lobby_button_press_system(
                     let room = Room::new(player.clone());
                     lobby.add_room(room.clone());
                     commands.insert_resource(room.clone());
+                    commands.insert_resource(player);
                     state.set(AppState::InRoom);
                 }
             }
@@ -221,6 +222,7 @@ pub fn receive_events(
             }
             Event::JoinRoomSuccess(room) => {
                 commands.insert_resource(room.to_owned());
+                commands.insert_resource(player);
                 let p = Some(player.clone());
                 if room.players.contains(&p) {
                     state.set(AppState::InRoom);
