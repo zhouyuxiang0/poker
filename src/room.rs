@@ -1,12 +1,11 @@
 use crate::{
-    card::{get_sprite_index, new_deck, Card, Rank, Suit},
-    common::{despawn_screen, AddressedEvent, AppState, CardIndex, Event, MyAssets, Socket},
-    lobby::{Lobby, LobbyComponent},
-    player::{self, Player},
+    card::{get_sprite_index, new_deck},
+    common::{AddressedEvent, AppState, Event, MyAssets, Socket},
+    lobby::Lobby,
+    player::Player,
 };
-use bevy::{audio::PlaybackMode, prelude::*, transform};
+use bevy::prelude::*;
 use bevy_matchbox::prelude::*;
-use rand::seq::SliceRandom;
 use serde::{Deserialize, Serialize};
 
 type Config = bevy_ggrs::GgrsConfig<u8, PeerId>;
@@ -16,12 +15,17 @@ const BOTTOM_CARD_POSITION: [[f32; 2]; 1] = [[20., 20.]];
 const LEFT_CARD_POSITION: [[f32; 2]; 1] = [[0., 0.]];
 const RIGHT_CARD_POSITION: [[f32; 2]; 1] = [[0., 0.]];
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RoomPlayer {
+    pub player: Player,
+    pub room_position: i8,
+}
+
 // 客户端房间资源
 #[derive(Resource, Serialize, Deserialize, Clone, Debug, Component)]
 pub struct Room {
-    // pub id: PeerId,
-    pub players: [Option<Player>; 3],
-    pub owner: Player,
+    pub players: [Option<RoomPlayer>; 3],
+    pub owner: RoomPlayer,
 }
 
 #[derive(Component)]
@@ -30,33 +34,24 @@ pub struct RoomUIComponent;
 // #[derive(Component)]
 // pub struct DealCardTimer(pub Timer);
 
-#[derive(Component)]
-pub struct RoomComponent {
-    pub id: PeerId,
-    pub players: Vec<Player>,
-    is_full: bool,
-    is_game_ready: bool,
-}
-
-#[derive(Component)]
-pub struct PlayerComponent {
-    pub peer: PeerId,
-}
-
-#[derive(Component)]
-pub struct PorkIndex(pub usize);
-
 impl Room {
     pub fn new(player: Player) -> Self {
+        let rome_player = RoomPlayer {
+            player,
+            room_position: 0,
+        };
         Self {
-            players: [Some(player.clone()), None, None],
-            owner: player.clone(),
+            players: [Some(rome_player.clone()), None, None],
+            owner: rome_player,
         }
     }
 
     pub fn join(&mut self, player: Player) -> bool {
         if let Some(index) = self.players.iter().position(|v| v.is_none()) {
-            self.players[index] = Some(player);
+            self.players[index] = Some(RoomPlayer {
+                player,
+                room_position: index as i8,
+            });
             true
         } else {
             false
@@ -66,7 +61,7 @@ impl Room {
 
 impl PartialEq for Room {
     fn eq(&self, other: &Self) -> bool {
-        self.owner == other.owner
+        self.owner.player == other.owner.player
     }
 }
 
@@ -79,10 +74,10 @@ pub struct Rooms(Vec<Room>);
 
 impl Plugin for RoomUIComponent {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(AppState::InRoom), setup_room)
+        app.add_systems(OnEnter(AppState::InRoom), setup)
             .add_systems(
                 Update,
-                (setup_player, publish_room, receive_events).run_if(in_state(AppState::InRoom)),
+                (update, publish_room, receive_events).run_if(in_state(AppState::InRoom)),
             )
             .add_systems(OnEnter(AppState::InRoom), (init_card))
             .add_systems(Update, deal_card.run_if(in_state(AppState::DealCard)));
@@ -130,7 +125,7 @@ fn deal_card(
     // }
 }
 
-pub fn setup_room(mut commands: Commands, assets: Res<MyAssets>) {
+pub fn setup(mut commands: Commands, assets: Res<MyAssets>) {
     commands.spawn((
         SpriteBundle {
             texture: assets.table_bg_1.clone(),
@@ -144,77 +139,82 @@ pub fn setup_room(mut commands: Commands, assets: Res<MyAssets>) {
     ));
 }
 
-fn setup_player(
+fn update(
     mut commands: Commands,
     local: Res<Player>,
     assets: Res<MyAssets>,
-    room: ResMut<Room>,
+    mut room: ResMut<Room>,
     mut state: ResMut<NextState<AppState>>,
 ) {
-    let local_index = room
-        .players
-        .iter()
-        .position(|p| p.is_some() && p.clone().unwrap() == *local);
-    if let Some(index) = local_index {
-        let sort_players = match index {
-            0 => [
-                room.players[0].clone(),
-                room.players[1].clone(),
-                room.players[2].clone(),
-            ],
-            1 => [
-                room.players[1].clone(),
-                room.players[2].clone(),
-                room.players[0].clone(),
-            ],
-            2 => [
-                room.players[2].clone(),
-                room.players[0].clone(),
-                room.players[1].clone(),
-            ],
-            _ => unreachable!(),
-        };
-        for index in 0..sort_players.len() {
-            if let Some(player) = sort_players[index].clone() {
-                commands
-                    .spawn(TextBundle {
-                        text: Text::from_section(
-                            player.id.to_string().get(0..7).unwrap_or("player"),
-                            TextStyle {
-                                font: assets.font.clone(),
-                                font_size: 24.0,
-                                color: Color::GOLD,
-                                ..Default::default()
-                            },
-                        )
-                        .with_alignment(TextAlignment::Center),
-                        style: Style {
-                            position_type: PositionType::Absolute,
-                            top: Val::Percent(PLAYER_POSITION[index][0]),
-                            left: Val::Percent(PLAYER_POSITION[index][1]),
-                            ..Default::default()
-                        },
-                        ..default()
-                    })
-                    .with_children(|builder| {
-                        builder.spawn(ImageBundle {
-                            image: assets.room_touxiang.clone().into(),
-                            style: Style {
-                                position_type: PositionType::Relative,
-                                top: Val::Px(-85.),
-                                left: Val::Px(-5.),
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        });
-                    });
-            }
-        }
-        if room.players.iter().filter(|p| p.is_some()).count() >= 3 {
-            println!("playing................");
-            state.set(AppState::Playing);
-        }
+    // 更新房间房主 默认数组第一个
+    if let Some(first) = &room.players[0] {
+        room.owner = first.to_owned();
     }
+    // 更新房间玩家
+    // let local_index = room
+    //     .players
+    //     .iter()
+    //     .position(|p| p.is_some() && p.clone().unwrap() == *local);
+    // if let Some(index) = local_index {
+    //     let sort_players = match index {
+    //         0 => [
+    //             room.players[0].clone(),
+    //             room.players[1].clone(),
+    //             room.players[2].clone(),
+    //         ],
+    //         1 => [
+    //             room.players[1].clone(),
+    //             room.players[2].clone(),
+    //             room.players[0].clone(),
+    //         ],
+    //         2 => [
+    //             room.players[2].clone(),
+    //             room.players[0].clone(),
+    //             room.players[1].clone(),
+    //         ],
+    //         _ => unreachable!(),
+    //     };
+    //     for index in 0..sort_players.len() {
+    //         if let Some(player) = sort_players[index].clone() {
+    //             commands
+    //                 .spawn(TextBundle {
+    //                     text: Text::from_section(
+    //                         player.id.to_string().get(0..7).unwrap_or("player"),
+    //                         TextStyle {
+    //                             font: assets.font.clone(),
+    //                             font_size: 24.0,
+    //                             color: Color::GOLD,
+    //                             ..Default::default()
+    //                         },
+    //                     )
+    //                     .with_alignment(TextAlignment::Center),
+    //                     style: Style {
+    //                         position_type: PositionType::Absolute,
+    //                         top: Val::Percent(PLAYER_POSITION[index][0]),
+    //                         left: Val::Percent(PLAYER_POSITION[index][1]),
+    //                         ..Default::default()
+    //                     },
+    //                     ..default()
+    //                 })
+    //                 .with_children(|builder| {
+    //                     builder.spawn(ImageBundle {
+    //                         image: assets.room_touxiang.clone().into(),
+    //                         style: Style {
+    //                             position_type: PositionType::Relative,
+    //                             top: Val::Px(-85.),
+    //                             left: Val::Px(-5.),
+    //                             ..Default::default()
+    //                         },
+    //                         ..Default::default()
+    //                     });
+    //                 });
+    //         }
+    //     }
+    //     if room.players.iter().filter(|p| p.is_some()).count() >= 3 {
+    //         println!("playing................");
+    //         state.set(AppState::Playing);
+    //     }
+    // }
 }
 
 pub fn publish_room(
@@ -256,12 +256,13 @@ pub fn receive_events(
                         .iter()
                         .filter(|p| {
                             p.is_some()
-                                && <std::option::Option<Player> as Clone>::clone(&p)
+                                && <std::option::Option<RoomPlayer> as Clone>::clone(&p)
                                     .unwrap()
+                                    .player
                                     .id
                                     != local.id
                         })
-                        .map(|p| p.clone().unwrap().id)
+                        .map(|p| p.clone().unwrap().player.id)
                         .collect::<Vec<PeerId>>();
                     peers.push(src.id);
                     socket.send_unreliable(

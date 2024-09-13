@@ -12,11 +12,8 @@ pub(crate) struct StartMenuPlugin;
 
 impl Plugin for StartMenuPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(AppState::StartMenu), setup_start_menu)
-            .add_systems(
-                Update,
-                (menu_button_press_system).run_if(in_state(AppState::StartMenu)),
-            )
+        app.add_systems(OnEnter(AppState::StartMenu), setup)
+            .add_systems(Update, update.run_if(in_state(AppState::StartMenu)))
             .add_systems(
                 OnExit(AppState::StartMenu),
                 despawn_screen::<StartMenuPlugin>,
@@ -24,7 +21,7 @@ impl Plugin for StartMenuPlugin {
     }
 }
 
-pub fn setup_start_menu(mut commands: Commands, assets: Res<MyAssets>) {
+pub fn setup(mut commands: Commands, assets: Res<MyAssets>) {
     let room_url = "ws://47.108.130.232:3536/poker";
     info!("connecting to matchbox server: {room_url}");
     let socket = MatchboxSocket::new_ggrs(room_url);
@@ -116,7 +113,7 @@ pub fn setup_start_menu(mut commands: Commands, assets: Res<MyAssets>) {
     // });
 }
 
-pub fn menu_button_press_system(
+pub fn update(
     mut commands: Commands,
     query: Query<(&Interaction, &MenuButton), (Changed<Interaction>, With<Button>)>,
     mut state: ResMut<NextState<AppState>>,

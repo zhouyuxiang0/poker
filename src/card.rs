@@ -1,47 +1,14 @@
 use bevy::prelude::*;
 use rand::{seq::SliceRandom, thread_rng};
 
-use crate::common::CardIndex;
+use crate::card_deck::{Rank, Suit};
 use serde::{Deserialize, Serialize};
-
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, PartialOrd, Ord, Serialize, Deserialize)]
-pub enum Suit {
-    /**梅花 */
-    Club,
-    /**方块 */
-    Diamond,
-    /**红心 */
-    Heart,
-    /**黑桃 */
-    Spade,
-    /**王 */
-    Joker,
-}
-
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, PartialOrd, Ord, Serialize, Deserialize)]
-pub enum Rank {
-    Two,
-    Three,
-    Four,
-    Five,
-    Six,
-    Seven,
-    Eight,
-    Nine,
-    Ten,
-    Jack,
-    Queen,
-    King,
-    Ace,
-    LittleJoker,
-    BigJoker,
-}
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Serialize, Deserialize, Component)]
 pub struct Card {
     pub suit: Suit,
     pub rank: Rank,
-    pub is_face_up: bool,
+    pub hide: bool,
 }
 
 impl Card {
@@ -49,13 +16,13 @@ impl Card {
         Card {
             suit,
             rank,
-            is_face_up: false,
+            hide: false,
         }
     }
 
     // 可以添加一些辅助方法，例如翻转牌
     pub fn flip(&mut self) {
-        self.is_face_up = !self.is_face_up;
+        self.hide = !self.hide;
     }
 
     // 可以添加其他与牌相关的功能，如比较大小等
@@ -114,7 +81,7 @@ pub fn shuffle_deck(mut deck: Vec<Card>) -> Vec<Card> {
 
 pub fn get_sprite_index(card: &Card) -> usize {
     // 计算普通牌在图集中的索引
-    if card.is_face_up {
+    if card.hide {
         let suit_offset = match card.suit {
             Suit::Club => 390,
             Suit::Diamond => 13,

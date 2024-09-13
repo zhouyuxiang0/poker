@@ -3,13 +3,15 @@ use bevy::{
     prelude::*,
     window::{EnabledButtons, WindowMode, WindowResolution},
 };
+use bevy_ggrs::GgrsConfig;
 
+mod card;
+mod card_deck;
 mod common;
 mod lobby;
 mod player;
 mod room;
 mod start_menu;
-mod card;
 
 use bevy_asset_loader::prelude::*;
 use bevy_embedded_assets::EmbeddedAssetPlugin;

@@ -32,7 +32,7 @@ impl Lobby {
 
     fn remove_room_by_peer(&mut self, peer: PeerId) {
         self.rooms.retain(|room| {
-            if room.owner.id == peer && room.players.len() <= 1 {
+            if room.owner.player.id == peer && room.players.len() <= 1 {
                 false
             } else {
                 true
@@ -43,17 +43,13 @@ impl Lobby {
 
 impl Plugin for LobbyComponent {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(AppState::Lobby), setup_lobby)
-            .add_systems(
-                Update,
-                (update_lobby, lobby_button_press_system, receive_events)
-                    .run_if(in_state(AppState::Lobby)),
-            )
+        app.add_systems(OnEnter(AppState::Lobby), setup)
+            .add_systems(Update, (update).run_if(in_state(AppState::Lobby)))
             .add_systems(OnExit(AppState::Lobby), (despawn_screen::<LobbyComponent>,));
     }
 }
 
-pub fn setup_lobby(mut commands: Commands, asset: Res<MyAssets>) {
+pub fn setup(mut commands: Commands, asset: Res<MyAssets>) {
     commands
         .spawn((
             NodeBundle {
@@ -145,14 +141,15 @@ pub fn setup_lobby(mut commands: Commands, asset: Res<MyAssets>) {
         });
 }
 
-pub fn lobby_button_press_system(
-    mut commands: Commands,
+pub fn update(
     query: Query<(&Interaction, &LobbyButton), (Changed<Interaction>, With<Button>)>,
-    mut state: ResMut<NextState<AppState>>,
-    mut lobby: ResMut<Lobby>,
+    mut commands: Commands,
     mut socket: ResMut<Socket>,
-    player: Res<Player>,
+    mut lobby: ResMut<Lobby>,
+    mut state: ResMut<NextState<AppState>>,
+    player: ResMut<Player>,
 ) {
+    // 按钮事件
     for (interaction, button) in query.iter() {
         if *interaction == Interaction::Pressed {
             match button {
@@ -172,7 +169,7 @@ pub fn lobby_button_press_system(
                             room.players
                                 .iter()
                                 .filter(|p| p.is_some())
-                                .map(|v| v.clone().unwrap().id)
+                                .map(|v| v.clone().unwrap().player.id)
                                 .collect::<Vec<PeerId>>(),
                         );
                     } else {
@@ -188,48 +185,38 @@ pub fn lobby_button_press_system(
                     let room = Room::new(player.clone());
                     lobby.add_room(room.clone());
                     commands.insert_resource(room.clone());
-                    commands.insert_resource(player);
+                    commands.insert_resource(player.to_owned());
                     state.set(AppState::InRoom);
                 }
             }
         }
     }
-}
-
-pub fn update_lobby(mut socket: ResMut<Socket>, mut lobby: ResMut<Lobby>) {
+    // 删除断开链接的用户
     for (peer, state) in socket.update_peers_unreliable() {
         match state {
             PeerState::Disconnected => lobby.remove_room_by_peer(peer),
             _ => {}
         }
     }
-}
-
-pub fn receive_events(
-    mut commands: Commands,
-    mut lobby: ResMut<Lobby>,
-    mut state: ResMut<NextState<AppState>>,
-    mut socket: ResMut<Socket>,
-    player: Res<Player>,
-) {
-    for AddressedEvent { src: _, event } in socket.receive_unreliable() {
-        match event {
+    // 同步房间信息
+    socket.receive_unreliable().iter().for_each(
+        move |AddressedEvent { src: _, event }| match event {
             Event::SyncRoom(room) => {
                 if !lobby.rooms.contains(&room) {
                     println!("add new room {:?}", room);
                     lobby.add_room(room.to_owned());
                 }
             }
+            Event::JoinRoom => todo!(),
             Event::JoinRoomSuccess(room) => {
                 commands.insert_resource(room.to_owned());
-                commands.insert_resource(player);
+                commands.insert_resource(player.to_owned());
                 let p = Some(player.clone());
                 if room.players.contains(&p) {
                     state.set(AppState::InRoom);
                 }
             }
             Event::Test(_) => todo!(),
-            _ => {}
-        }
-    }
+        },
+    );
 }
