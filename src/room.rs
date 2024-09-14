@@ -26,6 +26,8 @@ pub struct RoomPlayer {
 pub struct Room {
     pub players: [Option<RoomPlayer>; 3],
     pub owner: RoomPlayer,
+    // 房间数据是否有变化
+    pub changed: bool,
 }
 
 #[derive(Component)]
@@ -43,10 +45,12 @@ impl Room {
         Self {
             players: [Some(rome_player.clone()), None, None],
             owner: rome_player,
+            changed: true,
         }
     }
 
     pub fn join(&mut self, player: Player) -> bool {
+        // 找到空位 并分配空位
         if let Some(index) = self.players.iter().position(|v| v.is_none()) {
             self.players[index] = Some(RoomPlayer {
                 player,
@@ -67,9 +71,6 @@ impl PartialEq for Room {
 
 impl Eq for Room {}
 
-#[derive(Resource)]
-pub struct Rooms(Vec<Room>);
-
 // const PLAYER_LOCATION: Vec = [];
 
 impl Plugin for RoomUIComponent {
@@ -77,9 +78,9 @@ impl Plugin for RoomUIComponent {
         app.add_systems(OnEnter(AppState::InRoom), setup)
             .add_systems(
                 Update,
-                (update, publish_room, receive_events).run_if(in_state(AppState::InRoom)),
+                (update, receive_events).run_if(in_state(AppState::InRoom)),
             )
-            .add_systems(OnEnter(AppState::InRoom), (init_card))
+            .add_systems(OnEnter(AppState::InRoom), init_card)
             .add_systems(Update, deal_card.run_if(in_state(AppState::DealCard)));
         // .add_systems(OnExit(AppState::Playing), despawn_screen::<RoomUIComponent>);
     }
@@ -145,12 +146,36 @@ fn update(
     assets: Res<MyAssets>,
     mut room: ResMut<Room>,
     mut state: ResMut<NextState<AppState>>,
+    mut socket: ResMut<Socket>,
 ) {
+    // 实时发布房间信息
+    if room.changed {
+        let peers = socket
+            .unreliable_connected_peers()
+            .collect::<Vec<PeerId>>()
+            .to_owned();
+        socket.send_unreliable(
+            AddressedEvent {
+                src: local.clone(),
+                event: Event::SyncRoom(room.clone()),
+            },
+            peers,
+        );
+    }
     // 更新房间房主 默认数组第一个
     if let Some(first) = &room.players[0] {
         room.owner = first.to_owned();
     }
-    // 更新房间玩家
+    // 更新房间玩家 根据room_position 计算出用户的位置
+    if let Some(local_room_player) = room.players.iter().find(|x| {
+        if let Some(p) = x.to_owned() {
+            p.player == *local
+        } else {
+            false
+        }
+    }) {
+        // local_room_player.
+    }
     // let local_index = room
     //     .players
     //     .iter()
@@ -215,25 +240,7 @@ fn update(
     //         state.set(AppState::Playing);
     //     }
     // }
-}
-
-pub fn publish_room(
-    _lobby: ResMut<Lobby>,
-    room: ResMut<Room>,
-    mut socket: ResMut<Socket>,
-    local: Res<Player>,
-) {
-    let peers = socket
-        .unreliable_connected_peers()
-        .collect::<Vec<PeerId>>()
-        .to_owned();
-    socket.send_unreliable(
-        AddressedEvent {
-            src: local.clone(),
-            event: Event::SyncRoom(room.clone()),
-        },
-        peers,
-    );
+    room.changed = false;
 }
 
 pub fn receive_events(

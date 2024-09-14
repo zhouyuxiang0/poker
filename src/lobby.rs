@@ -4,7 +4,7 @@ use bevy_matchbox::matchbox_socket::{PeerId, PeerState};
 use crate::{
     common::{despawn_screen, AddressedEvent, AppState, Event, MyAssets, Socket},
     player::Player,
-    room::Room,
+    room::{Room, RoomPlayer},
 };
 
 #[derive(Component)]
@@ -26,10 +26,12 @@ impl Lobby {
         Self { rooms: vec![] }
     }
 
+    // 大厅新增房间
     fn add_room(&mut self, room: Room) {
         self.rooms.push(room);
     }
 
+    // 删除大厅用户
     fn remove_room_by_peer(&mut self, peer: PeerId) {
         self.rooms.retain(|room| {
             if room.owner.player.id == peer && room.players.len() <= 1 {
@@ -44,7 +46,7 @@ impl Lobby {
 impl Plugin for LobbyComponent {
     fn build(&self, app: &mut App) {
         app.add_systems(OnEnter(AppState::Lobby), setup)
-            .add_systems(Update, (update).run_if(in_state(AppState::Lobby)))
+            .add_systems(Update, update.run_if(in_state(AppState::Lobby)))
             .add_systems(OnExit(AppState::Lobby), (despawn_screen::<LobbyComponent>,));
     }
 }
@@ -211,8 +213,18 @@ pub fn update(
             Event::JoinRoomSuccess(room) => {
                 commands.insert_resource(room.to_owned());
                 commands.insert_resource(player.to_owned());
-                let p = Some(player.clone());
-                if room.players.contains(&p) {
+                if room
+                    .players
+                    .iter()
+                    .find(|room_player| {
+                        if let Some(room_player) = room_player {
+                            room_player.player.id == player.id
+                        } else {
+                            false
+                        }
+                    })
+                    .is_some()
+                {
                     state.set(AppState::InRoom);
                 }
             }
