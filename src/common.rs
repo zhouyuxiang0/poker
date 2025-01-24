@@ -81,6 +81,8 @@ pub struct MyAssets {
     pub room_touxiang: Handle<Image>,
     #[asset(path = "embedded://font/FZKTJW.ttf")]
     pub font: Handle<Font>,
+    #[asset(path = "embedded://image/img_loginlist_login_close.png")]
+    pub close_btn: Handle<Image>,
 }
 
 #[derive(Component)]
@@ -168,8 +170,10 @@ pub fn despawn_screen<T: Component>(to_despawn: Query<Entity, With<T>>, mut comm
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum Event {
-    SyncRoom(Room),
+    CreateRoom(Room),
+    DeleteRoom(Room),
     JoinRoom,
+    LeaveRoom,
     JoinRoomSuccess(Room),
     Test(i32),
 }

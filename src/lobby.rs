@@ -193,7 +193,7 @@ pub fn update(
             }
         }
     }
-    // 删除断开链接的用户
+    // 删除断开链接的房主房间
     for (peer, state) in socket.update_peers_unreliable() {
         match state {
             PeerState::Disconnected => lobby.remove_room_by_peer(peer),
@@ -203,13 +203,15 @@ pub fn update(
     // 同步房间信息
     socket.receive_unreliable().iter().for_each(
         move |AddressedEvent { src: _, event }| match event {
-            Event::SyncRoom(room) => {
+            Event::CreateRoom(room) => {
                 if !lobby.rooms.contains(&room) {
-                    println!("add new room {:?}", room);
                     lobby.add_room(room.to_owned());
                 }
             }
-            Event::JoinRoom => todo!(),
+            Event::DeleteRoom(room) => {
+                //
+            }
+            Event::JoinRoom => {}
             Event::JoinRoomSuccess(room) => {
                 commands.insert_resource(room.to_owned());
                 commands.insert_resource(player.to_owned());
@@ -228,7 +230,8 @@ pub fn update(
                     state.set(AppState::InRoom);
                 }
             }
-            Event::Test(_) => todo!(),
+            Event::Test(_) => {}
+            Event::LeaveRoom => {}
         },
     );
 }

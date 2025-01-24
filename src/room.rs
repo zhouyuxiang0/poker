@@ -1,8 +1,8 @@
 use crate::{
     card::{get_sprite_index, new_deck},
-    common::{AddressedEvent, AppState, Event, MyAssets, Socket},
+    common::{despawn_screen, AddressedEvent, AppState, Event, MyAssets, Socket},
     lobby::Lobby,
-    player::Player,
+    player::{self, Player},
 };
 use bevy::prelude::*;
 use bevy_matchbox::prelude::*;
@@ -19,6 +19,11 @@ const RIGHT_CARD_POSITION: [[f32; 2]; 1] = [[0., 0.]];
 pub struct RoomPlayer {
     pub player: Player,
     pub room_position: i8,
+}
+
+#[derive(Component)]
+pub enum LeaveButton {
+    Leave,
 }
 
 // 客户端房间资源
@@ -78,11 +83,18 @@ impl Plugin for RoomUIComponent {
         app.add_systems(OnEnter(AppState::InRoom), setup)
             .add_systems(
                 Update,
-                (update, receive_events).run_if(in_state(AppState::InRoom)),
+                (update, receive_events, leave_room).run_if(in_state(AppState::InRoom)),
             )
             .add_systems(OnEnter(AppState::InRoom), init_card)
-            .add_systems(Update, deal_card.run_if(in_state(AppState::DealCard)));
-        // .add_systems(OnExit(AppState::Playing), despawn_screen::<RoomUIComponent>);
+            .add_systems(Update, deal_card.run_if(in_state(AppState::DealCard)))
+            .add_systems(
+                OnExit(AppState::InRoom),
+                (despawn_screen::<RoomUIComponent>,),
+            )
+            .add_systems(
+                OnExit(AppState::DealCard),
+                (despawn_screen::<RoomUIComponent>,),
+            );
     }
 }
 
@@ -127,17 +139,44 @@ fn deal_card(
 }
 
 pub fn setup(mut commands: Commands, assets: Res<MyAssets>) {
-    commands.spawn((
-        SpriteBundle {
-            texture: assets.table_bg_1.clone(),
-            transform: Transform {
-                scale: Vec3::new(1.2, 1., 1.),
+    commands
+        .spawn((
+            NodeBundle {
+                style: Style {
+                    width: Val::Percent(100.),
+                    height: Val::Percent(100.),
+                    align_items: AlignItems::Center,
+                    justify_content: JustifyContent::Center,
+                    ..default()
+                },
                 ..Default::default()
             },
-            ..Default::default()
-        },
-        RoomUIComponent,
-    ));
+            RoomUIComponent,
+        ))
+        .with_children(|parent| {
+            parent.spawn(ImageBundle {
+                image: assets.table_bg_1.clone().into(),
+                transform: Transform {
+                    scale: Vec3::new(1.2, 1., 1.),
+                    ..Default::default()
+                },
+                ..Default::default()
+            });
+            parent
+                .spawn(ButtonBundle {
+                    image: assets.close_btn.clone().into(),
+                    style: Style {
+                        width: Val::Percent(2.),
+                        height: Val::Percent(3.),
+                        position_type: PositionType::Absolute,
+                        top: Val::Percent(0.5),
+                        left: Val::Percent(0.5),
+                        ..Default::default()
+                    },
+                    ..default()
+                })
+                .insert(LeaveButton::Leave);
+        });
 }
 
 fn update(
@@ -157,7 +196,7 @@ fn update(
         socket.send_unreliable(
             AddressedEvent {
                 src: local.clone(),
-                event: Event::SyncRoom(room.clone()),
+                event: Event::CreateRoom(room.clone()),
             },
             peers,
         );
@@ -243,6 +282,58 @@ fn update(
     room.changed = false;
 }
 
+fn leave_room(
+    query: Query<(&Interaction, &LeaveButton), (Changed<Interaction>, With<Button>)>,
+    mut state: ResMut<NextState<AppState>>,
+    me: Res<Player>,
+    mut room: ResMut<Room>,
+    mut socket: ResMut<Socket>,
+) {
+    // me
+    for (interaction, _) in query.iter() {
+        if *interaction == Interaction::Pressed {
+            // 判断房间是否是房主离开
+            if room.owner.player.id == me.id {
+                // 房主离开
+                if room.players.len() > 2 {
+                    if let Some(other) = room
+                        .players
+                        .iter()
+                        .find(|&v| v.to_owned().is_some_and(|x| x.player.id != me.id))
+                    {
+                        room.owner = other.to_owned().unwrap()
+                    }
+                } else {
+                    // 删除房间
+                    let peers = socket
+                        .unreliable_connected_peers()
+                        .collect::<Vec<PeerId>>()
+                        .to_owned();
+                    socket.send_unreliable(
+                        AddressedEvent {
+                            src: me.to_owned(),
+                            event: Event::DeleteRoom(room.to_owned()),
+                        },
+                        peers,
+                    );
+                }
+            }
+            socket.send_unreliable(
+                AddressedEvent {
+                    src: me.clone(),
+                    event: Event::LeaveRoom,
+                },
+                room.players
+                    .iter()
+                    .filter(|&p| p.to_owned().is_some_and(|x| x.player != me.to_owned()))
+                    .map(|v| v.clone().unwrap().player.id)
+                    .collect::<Vec<PeerId>>(),
+            );
+            state.set(AppState::Lobby);
+        }
+    }
+}
+
 pub fn receive_events(
     _lobby: ResMut<Lobby>,
     mut room: ResMut<Room>,
@@ -282,6 +373,16 @@ pub fn receive_events(
                 }
             }
             Event::Test(_) => todo!(),
+            Event::LeaveRoom => {
+                for player in &mut room.players {
+                    if let Some(p) = player {
+                        if p.player.id == src.id {
+                            *player = None;
+                            break;
+                        }
+                    }
+                }
+            }
             _ => {}
         }
     }
